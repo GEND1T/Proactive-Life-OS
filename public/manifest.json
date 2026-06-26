@@ -1,0 +1,19 @@
+{
+  "name": "Proactive Life-OS",
+  "short_name": "Life-OS",
+  "description": "Personal Life Dashboard — Kelola waktu, keuangan, dan produktivitas dengan AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "finance", "health"]
+}
