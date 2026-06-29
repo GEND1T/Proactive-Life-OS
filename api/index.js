@@ -8,22 +8,12 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 dotenv.config({ path: path.resolve(__dirname, '../.env.local') })
 
 const app = express()
-const PORT = process.env.PORT || 3001
 
-// Setup cors to allow the frontend to access endpoints
 app.use(cors())
 app.use(express.json())
 
 const clientId = process.env.VITE_GOOGLE_CLIENT_ID
 const clientSecret = process.env.GOOGLE_CLIENT_SECRET
-
-console.log('Google Auth Backend starting...')
-console.log('Using Client ID:', clientId ? 'Found' : 'Missing!')
-console.log('Using Client Secret:', clientSecret ? 'Found' : 'Missing!')
-
-if (!clientId) {
-  console.error('CRITICAL: VITE_GOOGLE_CLIENT_ID is not defined in .env.local')
-}
 
 // 1. Endpoint to exchange auth code for tokens
 app.post('/api/google/exchange', async (req, res) => {
@@ -35,7 +25,7 @@ app.post('/api/google/exchange', async (req, res) => {
 
   if (!clientSecret) {
     return res.status(500).json({ 
-      error: 'GOOGLE_CLIENT_SECRET is missing. Please add it to your .env.local file' 
+      error: 'GOOGLE_CLIENT_SECRET is missing. Please add it to Vercel environment variables or .env.local' 
     })
   }
 
@@ -49,7 +39,7 @@ app.post('/api/google/exchange', async (req, res) => {
         code,
         client_id: clientId,
         client_secret: clientSecret,
-        redirect_uri: 'postmessage', // Required for Google GIS Code Client popup mode
+        redirect_uri: 'postmessage',
         grant_type: 'authorization_code',
       }),
     })
@@ -63,10 +53,9 @@ app.post('/api/google/exchange', async (req, res) => {
       })
     }
 
-    // Return tokens to the client
     res.json({
       access_token: data.access_token,
-      refresh_token: data.refresh_token, // This will be returned only on the first authorization
+      refresh_token: data.refresh_token,
       expires_in: data.expires_in,
     })
   } catch (error) {
@@ -85,7 +74,7 @@ app.post('/api/google/refresh', async (req, res) => {
 
   if (!clientSecret) {
     return res.status(500).json({ 
-      error: 'GOOGLE_CLIENT_SECRET is missing. Please add it to your .env.local file' 
+      error: 'GOOGLE_CLIENT_SECRET is missing. Please add it to Vercel environment variables or .env.local' 
     })
   }
 
@@ -122,6 +111,12 @@ app.post('/api/google/refresh', async (req, res) => {
   }
 })
 
-app.listen(PORT, () => {
-  console.log(`Google Auth Backend listening on port ${PORT}`)
-})
+// Local development server listener
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 3001
+  app.listen(PORT, () => {
+    console.log(`Local Google Auth Backend listening on port ${PORT}`)
+  })
+}
+
+export default app
