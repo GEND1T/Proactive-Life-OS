@@ -16,7 +16,7 @@ const router = useRouter()
 const isConnected = ref(false)
 
 onMounted(() => {
-  isConnected.value = !!getValidToken()
+  isConnected.value = !!localStorage.getItem('google_refresh_token')
 })
 
 function handleConnect() {

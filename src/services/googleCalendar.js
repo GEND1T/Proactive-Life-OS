@@ -1,7 +1,7 @@
 let tokenClient = null
 
 /**
- * Initializes the Google GIS Token Client and requests an access token.
+ * Initializes the Google GIS Code Client and requests an auth code, then exchanges it for tokens.
  * @param {Function} callback - Callback function that receives the access token string.
  */
 export function initTokenClient(callback) {
@@ -19,44 +19,98 @@ export function initTokenClient(callback) {
   }
 
   try {
-    tokenClient = google.accounts.oauth2.initTokenClient({
+    tokenClient = google.accounts.oauth2.initCodeClient({
       client_id: clientId,
       scope: 'https://www.googleapis.com/auth/calendar.events',
-      callback: (response) => {
+      ux_mode: 'popup',
+      callback: async (response) => {
         if (response.error) {
-          console.error('OAuth Error:', response.error)
+          console.error('OAuth Code Client Error:', response.error)
           alert(`Login Gagal: ${response.error_description || response.error}`)
           return
         }
 
-        const expiresAt = Date.now() + (Number(response.expires_in) * 1000)
-        localStorage.setItem('google_access_token', response.access_token)
-        localStorage.setItem('google_token_expires_at', expiresAt)
+        if (response.code) {
+          try {
+            const exchangeResponse = await fetch('/api/google/exchange', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ code: response.code })
+            })
 
-        if (callback) callback(response.access_token)
+            const data = await exchangeResponse.json()
+
+            if (!exchangeResponse.ok) {
+              throw new Error(data.error || 'Gagal menukarkan kode otorisasi')
+            }
+
+            const expiresAt = Date.now() + (Number(data.expires_in) * 1000)
+            localStorage.setItem('google_access_token', data.access_token)
+            if (data.refresh_token) {
+              localStorage.setItem('google_refresh_token', data.refresh_token)
+            }
+            localStorage.setItem('google_token_expires_at', expiresAt)
+
+            if (callback) callback(data.access_token)
+          } catch (err) {
+            console.error('Failed to exchange code:', err)
+            alert(`Terjadi kesalahan saat memproses token Google: ${err.message}`)
+          }
+        }
       }
     })
 
-    tokenClient.requestAccessToken({ prompt: 'consent' })
+    tokenClient.requestCode()
   } catch (err) {
-    console.error('Failed to initialize Google token client:', err)
+    console.error('Failed to initialize Google code client:', err)
     alert(`Terjadi kesalahan saat menginisialisasi login Google: ${err.message}`)
   }
 }
 
 /**
  * Retrieves a valid saved access token from localStorage.
- * Checks for expiration with a 5-minute buffer.
- * @returns {string|null} - The access token, or null if expired or missing.
+ * Checks for expiration with a 5-minute buffer and refreshes it via backend if needed.
+ * @returns {Promise<string|null>} - The access token, or null if expired or missing.
  */
-export function getValidToken() {
+export async function getValidToken() {
   const token = localStorage.getItem('google_access_token')
   const expiresAt = localStorage.getItem('google_token_expires_at')
+  const refreshToken = localStorage.getItem('google_refresh_token')
 
   if (!token || !expiresAt) return null
 
-  // If token expires in less than 5 minutes, consider it expired
+  // If token expires in less than 5 minutes (300000 ms), refresh it automatically using refresh_token
   if (Date.now() > Number(expiresAt) - 300000) {
+    if (refreshToken) {
+      try {
+        console.log('Access token expired. Refreshing token via backend...')
+        const response = await fetch('/api/google/refresh', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.access_token) {
+          const expiresAtNew = Date.now() + (Number(data.expires_in) * 1000)
+          localStorage.setItem('google_access_token', data.access_token)
+          localStorage.setItem('google_token_expires_at', expiresAtNew)
+          console.log('Token successfully refreshed!')
+          return data.access_token
+        } else {
+          console.error('Failed to refresh token:', data.error)
+        }
+      } catch (err) {
+        console.error('Error while refreshing token:', err)
+      }
+    }
+
+    // If refreshing fails or no refresh token is present, clear local session
     clearToken()
     return null
   }
@@ -69,6 +123,7 @@ export function getValidToken() {
  */
 export function clearToken() {
   localStorage.removeItem('google_access_token')
+  localStorage.removeItem('google_refresh_token')
   localStorage.removeItem('google_token_expires_at')
 }
 
@@ -78,7 +133,7 @@ export function clearToken() {
  * @returns {Promise<Array>} - Mapped event array matching the TimelineView format.
  */
 export async function fetchEventsForDate(date) {
-  const token = getValidToken()
+  const token = await getValidToken()
   if (!token) {
     throw new Error('Unauthorized: Token tidak valid atau sudah kedaluwarsa')
   }
@@ -204,7 +259,7 @@ function getColorByCategory(category) {
  * @returns {Promise<Object>} The created Google Event mapped to local format
  */
 export async function createGoogleEvent(eventData) {
-  const token = getValidToken()
+  const token = await getValidToken()
   if (!token) throw new Error('Unauthorized: Sesi Google Calendar tidak aktif')
 
   const url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
@@ -250,7 +305,7 @@ export async function createGoogleEvent(eventData) {
  * @returns {Promise<Object>} The updated Google Event mapped to local format
  */
 export async function updateGoogleEvent(eventId, eventData) {
-  const token = getValidToken()
+  const token = await getValidToken()
   if (!token) throw new Error('Unauthorized: Sesi Google Calendar tidak aktif')
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`
@@ -295,7 +350,7 @@ export async function updateGoogleEvent(eventId, eventData) {
  * @returns {Promise<boolean>}
  */
 export async function deleteGoogleEvent(eventId) {
-  const token = getValidToken()
+  const token = await getValidToken()
   if (!token) throw new Error('Unauthorized: Sesi Google Calendar tidak aktif')
 
   const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`

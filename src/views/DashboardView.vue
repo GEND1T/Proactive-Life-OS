@@ -33,7 +33,7 @@ async function loadTodayEvents() {
   isLoading.value = true
   try {
     let googleEvents = []
-    if (getValidToken()) {
+    if (await getValidToken()) {
       googleEvents = await fetchEventsForDate(new Date())
     }
     const localEvents = getLocalEvents().filter(e => {

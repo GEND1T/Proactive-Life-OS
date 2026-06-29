@@ -56,8 +56,8 @@ watch(selectedDate, () => {
   checkConnectionAndLoad()
 })
 
-function checkConnectionAndLoad() {
-  const token = getValidToken()
+async function checkConnectionAndLoad() {
+  const token = await getValidToken()
   isConnected.value = !!token
   if (isConnected.value) {
     loadEvents()

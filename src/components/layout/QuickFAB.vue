@@ -407,7 +407,7 @@ async function handleCalendarSubmit() {
 
   isSubmitting.value = true
   
-  const token = getValidToken()
+  const token = await getValidToken()
   const isGoogleConnected = !!token
   showToast(isGoogleConnected ? 'Menyimpan ke Google Calendar...' : 'Menyimpan jadwal lokal...', 'info')
 
