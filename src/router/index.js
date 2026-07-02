@@ -27,16 +27,22 @@ const routes = [
     meta: { title: 'Finance Vault', icon: 'Wallet', index: 2 },
   },
   {
+    path: '/habit',
+    name: 'habit',
+    component: () => import('../views/HabitView.vue'),
+    meta: { title: 'Habits', icon: 'CheckSquare', index: 3 },
+  },
+  {
     path: '/lifelogs',
     name: 'lifelogs',
     component: () => import('../views/LifeLogsView.vue'),
-    meta: { title: 'Life Logs', icon: 'BarChart3', index: 3 },
+    meta: { title: 'Life Logs', icon: 'BarChart3', index: 4 },
   },
   {
     path: '/control',
     name: 'control',
     component: () => import('../views/ControlView.vue'),
-    meta: { title: 'Life-OS Control', icon: 'Settings', index: 4 },
+    meta: { title: 'Life-OS Control', icon: 'Settings', index: 5 },
   },
 ]
 

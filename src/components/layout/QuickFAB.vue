@@ -38,7 +38,8 @@ import {
   TrendingUp,
   Heart,
   Users,
-  PiggyBank
+  PiggyBank,
+  CheckSquare
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -447,6 +448,7 @@ const actions = [
   { label: 'Buku Kas Vault', icon: Wallet, color: 'from-blue-600 to-cyan-500', action: () => { router.push('/finance'); close() } },
   { label: 'Log Aktivitas', icon: Activity, color: 'from-purple-500 to-pink-600', action: openActivity },
   { label: 'Tambah Jadwal', icon: CalendarPlus, color: 'from-blue-500 to-indigo-600', action: openCalendar },
+  { label: 'Kelola Habit', icon: CheckSquare, color: 'from-indigo-500 to-purple-600', action: () => { router.push('/habit'); close() } },
 ]
 </script>
 
