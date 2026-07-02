@@ -51,7 +51,7 @@ const router = createRouter({
   routes,
 })
 
-// Route navigation guard with Supabase Auth & Demo Session Fallback
+// Route navigation guard with Supabase Auth
 router.beforeEach(async (to, from, next) => {
   let session = null
   try {
@@ -61,12 +61,9 @@ router.beforeEach(async (to, from, next) => {
     console.error('Error getting supabase session:', err)
   }
 
-  const isDemoSession = localStorage.getItem('sb-demo-session') === 'true'
-  const hasSession = session || isDemoSession
-
-  if (to.name !== 'login' && !hasSession) {
+  if (to.name !== 'login' && !session) {
     next({ name: 'login' })
-  } else if (to.name === 'login' && hasSession) {
+  } else if (to.name === 'login' && session) {
     next({ name: 'dashboard' })
   } else {
     next()

@@ -1,17 +1,20 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { 
-  Footprints, Heart, Brain, Moon, Code, Sparkles, Smartphone
+  Footprints, Heart, Brain, Moon, Code, Sparkles, Smartphone, Plus
 } from 'lucide-vue-next'
 import AIInsightCard from '../components/shared/AIInsightCard.vue'
 import StatCard from '../components/shared/StatCard.vue'
 import SleepChart from '../components/lifelogs/SleepChart.vue'
 import CodingChart from '../components/lifelogs/CodingChart.vue'
+import AddActivityLogModal from '../components/lifelogs/AddActivityLogModal.vue'
 import { useActivityDB } from '../composables/useActivityDB'
 import { useFormatters } from '../composables/useFormatters'
 
 const { formatMinutesToHours } = useFormatters()
 const { todayLog, weeklyStats, fetchActivityLogs } = useActivityDB()
+
+const showAddLogModal = ref(false)
 
 onMounted(() => {
   fetchActivityLogs()
@@ -81,7 +84,13 @@ const isScreenTimeOver = computed(() => (todayLog.value?.screen_time_minutes || 
       <div class="surface-card p-4 hover:scale-[1.005] transition-transform">
         <div class="flex items-center justify-between mb-3.5">
           <h3 class="text-xs font-bold text-surface-400 uppercase tracking-wider">Target Harian</h3>
-          <span class="text-[10px] text-surface-500 font-medium">Hari Ini</span>
+          <button
+            @click="showAddLogModal = true"
+            class="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-[10px] font-bold text-white uppercase tracking-wider active:scale-95 transition-all shadow-lg shadow-purple-500/20"
+          >
+            <Plus class="w-3.5 h-3.5" />
+            Log Hari Ini
+          </button>
         </div>
 
         <div class="space-y-4">
@@ -201,5 +210,12 @@ const isScreenTimeOver = computed(() => (todayLog.value?.screen_time_minutes || 
         />
       </div>
     </div>
+
+    <!-- Add Activity Log Modal -->
+    <AddActivityLogModal
+      :show="showAddLogModal"
+      @close="showAddLogModal = false"
+      @saved="fetchActivityLogs()"
+    />
   </div>
 </template>

@@ -167,6 +167,38 @@ export function useFinanceDB() {
     }
   }
 
+  async function addTransaction(payload) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const newTransaction = {
+        amount: Math.abs(Number(payload.amount) || 0),
+        description: payload.description,
+        category: payload.category || 'Makanan',
+        payment_method: payload.payment_method || 'dana',
+        transaction_type: (payload.transaction_type || 'EXPENSE').toUpperCase(),
+        is_impulsive: !!payload.is_impulsive,
+        transaction_date: payload.transaction_date || new Date().toISOString().split('T')[0],
+        note: payload.note || '',
+      }
+
+      const { data, error: dbError } = await supabase
+        .from('financial_logs')
+        .insert([newTransaction])
+        .select()
+
+      if (dbError) throw dbError
+      await fetchTransactions()
+      return { success: true, data: data?.[0] }
+    } catch (err) {
+      console.error('Error adding transaction:', err)
+      error.value = err.message || 'Gagal menambahkan transaksi.'
+      return { success: false, error: error.value }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     transactions,
     wallets,
@@ -176,6 +208,7 @@ export function useFinanceDB() {
     isLoading,
     error,
     fetchTransactions,
+    addTransaction,
     deleteTransaction,
     updateTransaction,
   }

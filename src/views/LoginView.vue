@@ -33,16 +33,6 @@ async function handleEmailAuth() {
       if (error) throw error
       successMessage.value = 'Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi.'
     } else {
-      // Demo login credentials bypass
-      if (email.value === 'test@gmail.com' && String(password.value) === '123456') {
-        successMessage.value = 'Login berhasil (Demo Mode)! Mengalihkan...'
-        localStorage.setItem('sb-demo-session', 'true')
-        setTimeout(() => {
-          router.push('/')
-        }, 1000)
-        return
-      }
-
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value,

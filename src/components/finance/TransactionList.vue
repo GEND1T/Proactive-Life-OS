@@ -16,6 +16,15 @@ const expandedId = ref(null)
 const isEditing = ref(false)
 const isSaving = ref(false)
 
+// Toast Alert
+const toast = reactive({ show: false, message: '', type: 'info' })
+function showToast(message, type = 'info') {
+  toast.message = message
+  toast.type = type
+  toast.show = true
+  setTimeout(() => { toast.show = false }, 3500)
+}
+
 // Delete Confirm States
 const showDeleteConfirm = ref(false)
 const transactionToDelete = ref(null)
@@ -200,7 +209,7 @@ function triggerEdit(txn) {
 // Submit Edits
 async function handleEditSubmit() {
   if (!editForm.amount || !editForm.description) {
-    alert('Harap isi nominal dan deskripsi.')
+    showToast('Harap isi nominal dan deskripsi.', 'error')
     return
   }
 
@@ -221,7 +230,7 @@ async function handleEditSubmit() {
     isEditing.value = false
     expandedId.value = null
   } else {
-    alert(res.error || 'Gagal memperbarui transaksi.')
+    showToast(res.error || 'Gagal memperbarui transaksi.', 'error')
   }
 }
 
@@ -239,7 +248,7 @@ async function confirmDelete() {
   if (res.success) {
     expandedId.value = null
   } else {
-    alert(res.error || 'Gagal menghapus transaksi.')
+    showToast(res.error || 'Gagal menghapus transaksi.', 'error')
   }
 }
 
@@ -247,7 +256,7 @@ function copyToClipboard(text) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text)
       .then(() => {
-        alert('ID Transaksi berhasil disalin ke clipboard!')
+        showToast('ID disalin ke clipboard!', 'success')
       })
       .catch(err => {
         console.error('Failed to copy: ', err)
@@ -260,7 +269,7 @@ function copyToClipboard(text) {
     textarea.select()
     try {
       document.execCommand('copy')
-      alert('ID Transaksi berhasil disalin ke clipboard!')
+      showToast('ID disalin ke clipboard!', 'success')
     } catch (err) {
       console.error('Fallback copy failed: ', err)
     }
@@ -271,6 +280,19 @@ function copyToClipboard(text) {
 
 <template>
   <div class="mx-4">
+    <!-- Toast Notification -->
+    <transition name="toast-slide">
+      <div
+        v-if="toast.show"
+        class="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-[90%] max-w-sm p-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 backdrop-blur-xl"
+        :class="{
+          'bg-success-500/15 border-success-500/30': toast.type === 'success',
+          'bg-danger-500/15 border-danger-500/30': toast.type === 'error',
+        }"
+      >
+        <span class="text-xs font-semibold text-surface-200">{{ toast.message }}</span>
+      </div>
+    </transition>
     <div v-for="[date, txns] in groupedTransactions" :key="date" class="mb-4">
       <div class="flex items-center gap-2 mb-2 px-1">
         <span class="text-xs font-semibold text-surface-500 uppercase tracking-wider">
@@ -638,5 +660,18 @@ function copyToClipboard(text) {
 .modal-scale-leave-to {
   opacity: 0;
   transform: scale(0.95) translate3d(0, 10px, 0);
+}
+
+.toast-slide-enter-active,
+.toast-slide-leave-active {
+  transition: all 0.3s ease-out;
+}
+.toast-slide-enter-from {
+  opacity: 0;
+  transform: translate(-50%, -20px);
+}
+.toast-slide-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -20px);
 }
 </style>

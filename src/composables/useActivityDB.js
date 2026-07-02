@@ -187,6 +187,66 @@ export function useActivityDB() {
     }
   })
 
+  async function addActivityLog(payload) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const logData = {
+        logged_date: payload.logged_date || new Date().toISOString().split('T')[0],
+        sleep_type: payload.sleep_type || 'Tidur Utama',
+        sleep_duration_minutes: Number(payload.sleep_duration_minutes) || 0,
+        deep_sleep_minutes: Number(payload.deep_sleep_minutes) || 0,
+        screen_time_minutes: Number(payload.screen_time_minutes) || 0,
+        wakatime_coding_hours: Number(payload.wakatime_coding_hours) || 0,
+        steps_count: Number(payload.steps_count) || 0,
+        resting_heart_rate: Number(payload.resting_heart_rate) || 68,
+        stress_level_score: Number(payload.stress_level_score) || 30,
+        mood_score: Number(payload.mood_score) || 7,
+      }
+
+      // Add session_start and session_end if provided
+      if (payload.session_start) logData.session_start = payload.session_start
+      if (payload.session_end) logData.session_end = payload.session_end
+
+      const { data, error: dbError } = await supabase
+        .from('activity_logs')
+        .insert([logData])
+        .select()
+
+      if (dbError) throw dbError
+      await fetchActivityLogs()
+      return { success: true, data: data?.[0] }
+    } catch (err) {
+      console.error('Error adding activity log:', err)
+      error.value = err.message || 'Gagal menambahkan log aktivitas.'
+      return { success: false, error: error.value }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  async function updateActivityLog(id, payload) {
+    isLoading.value = true
+    error.value = null
+    try {
+      const { data, error: dbError } = await supabase
+        .from('activity_logs')
+        .update(payload)
+        .eq('id', id)
+        .select()
+
+      if (dbError) throw dbError
+      await fetchActivityLogs()
+      return { success: true, data: data?.[0] }
+    } catch (err) {
+      console.error('Error updating activity log:', err)
+      error.value = err.message || 'Gagal memperbarui log aktivitas.'
+      return { success: false, error: error.value }
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     rawLogs,
     activityLogs,
@@ -195,5 +255,7 @@ export function useActivityDB() {
     isLoading,
     error,
     fetchActivityLogs,
+    addActivityLog,
+    updateActivityLog,
   }
 }

@@ -1,13 +1,17 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { Plus } from 'lucide-vue-next'
 import AIInsightCard from '../components/shared/AIInsightCard.vue'
 import BalanceCards from '../components/finance/BalanceCards.vue'
 import TransactionList from '../components/finance/TransactionList.vue'
+import AddTransactionModal from '../components/finance/AddTransactionModal.vue'
 import { useFinanceDB } from '../composables/useFinanceDB'
 import { useFormatters } from '../composables/useFormatters'
 
 const { formatCurrency } = useFormatters()
 const { totalBalance, dailyBudget, todaySpending, fetchTransactions, isLoading } = useFinanceDB()
+
+const showAddModal = ref(false)
 
 const spendingPercentage = computed(() => {
   if (!dailyBudget.value) return 0
@@ -58,8 +62,15 @@ onMounted(() => {
 
     <!-- Balance Cards -->
     <div class="mb-2">
-      <div class="px-4 mb-2">
+      <div class="px-4 mb-2 flex items-center justify-between">
         <h3 class="text-sm font-semibold text-surface-300">E-Wallet</h3>
+        <button
+          @click="showAddModal = true"
+          class="flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-gradient-to-r from-primary-500 to-purple-600 hover:from-primary-600 hover:to-purple-700 text-[10px] font-bold text-white uppercase tracking-wider active:scale-95 transition-all shadow-lg shadow-primary-500/20"
+        >
+          <Plus class="w-3.5 h-3.5" />
+          Tambah
+        </button>
       </div>
       <BalanceCards />
     </div>
@@ -71,5 +82,12 @@ onMounted(() => {
       </div>
       <TransactionList />
     </div>
+
+    <!-- Add Transaction Modal -->
+    <AddTransactionModal
+      :show="showAddModal"
+      @close="showAddModal = false"
+      @saved="fetchTransactions()"
+    />
   </div>
 </template>

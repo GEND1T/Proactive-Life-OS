@@ -159,7 +159,7 @@ function handleUpdateSubmit() {
         checkConnectionAndLoad()
       }).catch(err => {
         console.error('Error updating Google event:', err)
-        alert(err.message || 'Gagal memperbarui jadwal di Google Calendar.')
+        errorMsg.value = err.message || 'Gagal memperbarui jadwal di Google Calendar.'
       }).finally(() => {
         isSavingEdit.value = false
       })
@@ -169,25 +169,30 @@ function handleUpdateSubmit() {
         showEditModal.value = false
         checkConnectionAndLoad()
       } else {
-        alert('Gagal memperbarui jadwal lokal.')
+        errorMsg.value = 'Gagal memperbarui jadwal lokal.'
       }
       isSavingEdit.value = false
     }
   } catch (err) {
     console.error('Error updating event:', err)
-    alert('Terjadi kesalahan saat mengupdate jadwal.')
+    errorMsg.value = 'Terjadi kesalahan saat mengupdate jadwal.'
     isSavingEdit.value = false
   }
 }
 
+// Delete Confirm State
+const showDeleteEventConfirm = ref(false)
+
 function handleDeleteEvent() {
   if (!editForm.id) return
+  showDeleteEventConfirm.value = true
+}
 
+function confirmDeleteEvent() {
   const isGoogleEvent = isConnected.value && !String(editForm.id).startsWith('evt-local-') && !String(editForm.id).startsWith('evt-')
-  
-  if (!confirm(isGoogleEvent ? 'Apakah Anda yakin ingin menghapus jadwal ini dari Google Calendar?' : 'Apakah Anda yakin ingin menghapus jadwal lokal ini?')) return
 
   isDeletingEvent.value = true
+  showDeleteEventConfirm.value = false
   try {
     if (isGoogleEvent) {
       deleteGoogleEvent(editForm.id).then(() => {
@@ -195,7 +200,7 @@ function handleDeleteEvent() {
         checkConnectionAndLoad()
       }).catch(err => {
         console.error('Error deleting Google event:', err)
-        alert(err.message || 'Gagal menghapus jadwal di Google Calendar.')
+        errorMsg.value = err.message || 'Gagal menghapus jadwal di Google Calendar.'
       }).finally(() => {
         isDeletingEvent.value = false
       })
@@ -205,13 +210,13 @@ function handleDeleteEvent() {
         showEditModal.value = false
         checkConnectionAndLoad()
       } else {
-        alert('Gagal menghapus jadwal lokal.')
+        errorMsg.value = 'Gagal menghapus jadwal lokal.'
       }
       isDeletingEvent.value = false
     }
   } catch (err) {
     console.error('Error deleting event:', err)
-    alert('Terjadi kesalahan saat menghapus jadwal.')
+    errorMsg.value = 'Terjadi kesalahan saat menghapus jadwal.'
     isDeletingEvent.value = false
   }
 }
@@ -459,6 +464,49 @@ function handleDeleteEvent() {
         class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
         @click="showEditModal = false"
       ></div>
+    </transition>
+
+    <!-- Delete Confirmation Modal -->
+    <transition name="fade">
+      <div
+        v-if="showDeleteEventConfirm"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80]"
+        @click="showDeleteEventConfirm = false"
+      ></div>
+    </transition>
+    <transition name="modal-scale">
+      <div
+        v-if="showDeleteEventConfirm"
+        class="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-sm mx-auto z-[90] surface-card p-5 border border-white/5 shadow-2xl flex flex-col items-center text-center"
+      >
+        <div class="w-12 h-12 rounded-full bg-danger-500/15 flex items-center justify-center mb-4">
+          <Trash2 class="w-6 h-6 text-danger-400" />
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">Hapus Jadwal?</h3>
+        <p class="text-xs text-surface-400 mb-6 leading-relaxed">
+          Apakah Anda yakin ingin menghapus jadwal <span class="font-bold text-white">"{{ editForm.title }}"</span>?
+          <span v-if="isConnected && !String(editForm.id).startsWith('evt-local-') && !String(editForm.id).startsWith('evt-')">
+            Jadwal juga akan dihapus dari Google Calendar Anda.
+          </span>
+        </p>
+        <div class="flex items-center gap-3 w-full">
+          <button
+            type="button"
+            @click="showDeleteEventConfirm = false"
+            class="flex-1 py-2.5 rounded-xl bg-surface-800 border border-white/5 text-xs font-semibold text-surface-300 hover:bg-surface-700 active:scale-95 transition-all"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            @click="confirmDeleteEvent"
+            :disabled="isDeletingEvent"
+            class="flex-1 py-2.5 rounded-xl bg-danger-500 hover:bg-danger-600 text-xs font-semibold text-white active:scale-95 transition-all shadow-lg shadow-danger-500/20 disabled:opacity-50"
+          >
+            Hapus
+          </button>
+        </div>
+      </div>
     </transition>
   </div>
 </template>
