@@ -123,8 +123,14 @@ const categoryColors = {
           Lihat Semua →
         </router-link>
       </div>
-      <div v-if="isLoading" class="flex justify-center py-4">
-        <div class="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+      <div v-if="isLoading" class="space-y-2 animate-pulse">
+        <div v-for="i in 3" :key="i" class="surface-card-sm p-3 flex items-center gap-3">
+          <div class="w-1 h-10 rounded-full bg-surface-700/50 shrink-0"></div>
+          <div class="flex-1 min-w-0 space-y-2">
+            <div class="h-3.5 bg-surface-700/40 rounded-lg w-2/3"></div>
+            <div class="h-2.5 bg-surface-700/30 rounded-lg w-1/3"></div>
+          </div>
+        </div>
       </div>
       <div v-else-if="todayEvents.length === 0" class="surface-card-sm p-4 text-center">
         <p class="text-sm text-surface-500">Tidak ada jadwal hari ini 🎉</p>

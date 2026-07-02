@@ -242,9 +242,18 @@ function handleDeleteEvent() {
 
     <!-- Timeline & Loaders -->
     <div class="relative min-h-[150px]">
-      <div v-if="isLoading" class="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex flex-col items-center justify-center z-10 py-10">
-        <RefreshCw class="w-8 h-8 text-primary-400 animate-spin mb-3" />
-        <p class="text-xs font-semibold text-surface-400 uppercase tracking-widest">Sinkronisasi Google API...</p>
+      <div v-if="isLoading" class="space-y-3 px-4 py-2 animate-pulse">
+        <div class="text-[10px] text-surface-500 font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full bg-primary-500/40 animate-ping"></div>
+          <span>Menyinkronkan Google API...</span>
+        </div>
+        <div v-for="i in 3" :key="i" class="surface-card p-4 border border-white/5 bg-surface-800/20 backdrop-blur-md rounded-2xl flex items-center gap-3">
+          <div class="w-1 h-10 bg-surface-700/50 rounded-full shrink-0"></div>
+          <div class="space-y-2 flex-1">
+            <div class="h-3.5 bg-surface-700/40 rounded-lg w-2/3"></div>
+            <div class="h-2.5 bg-surface-700/30 rounded-lg w-1/3"></div>
+          </div>
+        </div>
       </div>
 
       <div v-if="errorMsg" class="mx-4 mb-4 p-4 rounded-2xl bg-danger-500/10 border border-danger-500/20 text-danger-400 flex items-start gap-3">

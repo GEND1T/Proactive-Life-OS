@@ -1,15 +1,83 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import AppHeader from './components/layout/AppHeader.vue'
 import BottomNav from './components/layout/BottomNav.vue'
 import QuickFAB from './components/layout/QuickFAB.vue'
 import { useTheme } from './composables/useTheme'
 
 const route = useRoute()
+const router = useRouter()
 const theme = useTheme() // Initialize theme state and lifecycle hooks
 const previousIndex = ref(0)
 const mainContent = ref(null)
+
+// Touch swipe navigation handler
+const touchStartX = ref(0)
+const touchStartY = ref(0)
+const touchEndX = ref(0)
+const touchEndY = ref(0)
+
+const routeSequence = [
+  '/',
+  '/calendar',
+  '/finance',
+  '/habit',
+  '/lifelogs',
+  '/control'
+]
+
+function handleTouchStart(e) {
+  // Ignore swipes on sliders, select boxes, textareas, scroll-snap boxes, or charts
+  const target = e.target
+  if (
+    target.closest('input[type="range"]') ||
+    target.closest('select') ||
+    target.closest('textarea') ||
+    target.closest('.scroll-snap-x') ||
+    target.closest('.no-swipe') ||
+    target.closest('canvas')
+  ) {
+    return
+  }
+
+  touchStartX.value = e.touches[0].screenX
+  touchStartY.value = e.touches[0].screenY
+}
+
+function handleTouchEnd(e) {
+  if (!touchStartX.value || !touchStartY.value) return
+
+  touchEndX.value = e.changedTouches[0].screenX
+  touchEndY.value = e.changedTouches[0].screenY
+
+  const deltaX = touchEndX.value - touchStartX.value
+  const deltaY = touchEndY.value - touchStartY.value
+
+  // Verify horizontal swiping gesture (deltaX > 100px and vertical variation deltaY < 60px)
+  if (Math.abs(deltaX) > 100 && Math.abs(deltaY) < 60) {
+    const currentPath = route.path
+    const currentIndex = routeSequence.indexOf(currentPath)
+
+    if (currentIndex !== -1) {
+      if (deltaX < 0) {
+        // Swiped left -> Go to Next Page
+        if (currentIndex < routeSequence.length - 1) {
+          router.push(routeSequence[currentIndex + 1])
+        }
+      } else {
+        // Swiped right -> Go to Prev Page
+        if (currentIndex > 0) {
+          router.push(routeSequence[currentIndex - 1])
+        }
+      }
+    }
+  }
+
+  // Reset coordinates
+  touchStartX.value = 0
+  touchStartY.value = 0
+}
 
 const transitionName = computed(() => {
   const currentIndex = route.meta.index ?? 0
@@ -44,6 +112,8 @@ watch(() => route.path, () => {
         ref="mainContent"
         class="flex-1 overflow-y-auto"
         :class="route.meta.layout !== 'blank' ? 'pb-24 pt-16' : ''"
+        @touchstart="handleTouchStart"
+        @touchend="handleTouchEnd"
       >
         <router-view v-slot="{ Component }">
           <transition :name="transitionName" mode="out-in">

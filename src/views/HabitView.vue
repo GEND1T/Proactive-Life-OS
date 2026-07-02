@@ -352,8 +352,31 @@ function formatTime(timeStr) {
       </div>
     </div>
 
+    <!-- Loading Skeletons -->
+    <div v-if="isLoading" class="mx-4 space-y-2.5 pb-20 animate-pulse">
+      <div v-for="i in 3" :key="i" class="surface-card-sm p-4 border border-white/5 bg-surface-800/20 backdrop-blur-md rounded-2xl">
+        <div class="flex items-center justify-between gap-3 w-full mb-3">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="w-10 h-10 bg-surface-700/40 rounded-xl shrink-0"></div>
+            <div class="space-y-2 flex-1">
+              <div class="h-3.5 bg-surface-700/40 rounded-lg w-2/3"></div>
+              <div class="h-2.5 bg-surface-700/30 rounded-lg w-1/3"></div>
+            </div>
+          </div>
+          <div class="w-16 h-8 bg-surface-700/30 rounded-2xl shrink-0"></div>
+        </div>
+        <div v-if="activeTab === 'SUGGESTION'" class="space-y-1.5 mt-2">
+          <div class="flex justify-between w-full">
+            <div class="w-20 h-2 bg-surface-700/30 rounded-lg"></div>
+            <div class="w-8 h-2.5 bg-surface-700/30 rounded-lg"></div>
+          </div>
+          <div class="h-2 bg-surface-700/30 rounded-full w-full"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Empty States -->
-    <div v-if="filteredHabits.length === 0" class="mx-4 mb-4 text-center py-10 surface-card p-6 border border-white/5">
+    <div v-else-if="filteredHabits.length === 0" class="mx-4 mb-4 text-center py-10 surface-card p-6 border border-white/5">
       <div class="w-12 h-12 rounded-full bg-surface-800 flex items-center justify-center text-surface-500 mx-auto mb-3">
         <Award class="w-6 h-6" />
       </div>
