@@ -173,7 +173,8 @@ function handleClose() {
                 <input
                   v-model.number="form.sleep_hours"
                   type="range" min="0" max="14" step="1"
-                  class="w-full accent-purple-500"
+                  class="custom-range-slider w-full"
+                  :style="{ '--thumb-color': 'var(--purple-500)' }"
                   :disabled="isSubmitting"
                 />
               </div>
@@ -182,7 +183,8 @@ function handleClose() {
                 <input
                   v-model.number="form.sleep_minutes"
                   type="range" min="0" max="55" step="5"
-                  class="w-full accent-purple-500"
+                  class="custom-range-slider w-full"
+                  :style="{ '--thumb-color': 'var(--purple-500)' }"
                   :disabled="isSubmitting"
                 />
               </div>
@@ -192,7 +194,8 @@ function handleClose() {
               <input
                 v-model.number="form.deep_sleep_minutes"
                 type="range" min="0" max="300" step="5"
-                class="w-full accent-indigo-500"
+                class="custom-range-slider w-full"
+                :style="{ '--thumb-color': 'var(--primary-500)' }"
                 :disabled="isSubmitting"
               />
             </div>
@@ -246,7 +249,8 @@ function handleClose() {
                 <input
                   v-model.number="form.screen_time_hours"
                   type="range" min="0" max="16" step="1"
-                  class="w-full accent-warning-500"
+                  class="custom-range-slider w-full"
+                  :style="{ '--thumb-color': '#F59E0B' }"
                   :disabled="isSubmitting"
                 />
               </div>
@@ -255,7 +259,8 @@ function handleClose() {
                 <input
                   v-model.number="form.screen_time_minutes"
                   type="range" min="0" max="55" step="5"
-                  class="w-full accent-warning-500"
+                  class="custom-range-slider w-full"
+                  :style="{ '--thumb-color': '#F59E0B' }"
                   :disabled="isSubmitting"
                 />
               </div>
@@ -264,41 +269,58 @@ function handleClose() {
 
           <!-- Heart Rate & Stress Row -->
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <div class="flex items-center gap-1.5 mb-1.5">
-                <Heart class="w-3.5 h-3.5 text-danger-400" />
-                <label class="text-[10px] font-bold text-surface-400 uppercase tracking-wider">Heart Rate</label>
+            <!-- Heart Rate Card -->
+            <div class="surface-card-sm p-3 border border-danger-500/10 bg-danger-500/5 rounded-2xl flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-1.5">
+                  <Heart class="w-3.5 h-3.5 text-danger-400" />
+                  <span class="text-[10px] font-bold text-white uppercase tracking-wider">Heart Rate</span>
+                </div>
+                <span class="text-xs font-bold text-danger-400 bg-danger-500/10 px-2 py-0.5 rounded font-mono">
+                  {{ form.resting_heart_rate }} bpm
+                </span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="mt-1 flex flex-col gap-1">
                 <input
                   v-model.number="form.resting_heart_rate"
                   type="range" min="40" max="120" step="1"
-                  class="flex-1 accent-danger-500"
+                  class="custom-range-slider w-full"
+                  :style="{ '--thumb-color': 'var(--danger-500)' }"
                   :disabled="isSubmitting"
                 />
-                <span class="text-xs font-bold text-white bg-surface-800 px-2.5 py-1 rounded-lg min-w-[40px] text-center border border-white/5">
-                  {{ form.resting_heart_rate }}
-                </span>
+                <div class="flex justify-between text-[8px] text-surface-500 mt-0.5">
+                  <span>40 bpm</span>
+                  <span>120 bpm</span>
+                </div>
               </div>
             </div>
-            <div>
-              <div class="flex items-center gap-1.5 mb-1.5">
-                <Brain class="w-3.5 h-3.5 text-indigo-400" />
-                <label class="text-[10px] font-bold text-surface-400 uppercase tracking-wider">Stres</label>
+
+            <!-- Stress Card -->
+            <div class="surface-card-sm p-3 border border-indigo-500/10 bg-indigo-500/5 rounded-2xl flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-1.5">
+                  <Brain class="w-3.5 h-3.5 text-indigo-400" />
+                  <span class="text-[10px] font-bold text-white uppercase tracking-wider">Stres</span>
+                </div>
+                <span
+                  class="text-xs font-bold px-2 py-0.5 rounded font-mono"
+                  :class="form.stress_level_score > 60 ? 'text-danger-400 bg-danger-500/10' : form.stress_level_score > 30 ? 'text-warning-400 bg-warning-500/10' : 'text-success-400 bg-success-500/10'"
+                >
+                  {{ form.stress_level_score }}%
+                </span>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="mt-1 flex flex-col gap-1">
                 <input
                   v-model.number="form.stress_level_score"
                   type="range" min="0" max="100" step="5"
-                  class="flex-1 accent-indigo-500"
+                  class="custom-range-slider w-full"
+                  :style="{ '--thumb-color': 'var(--primary-500)' }"
                   :disabled="isSubmitting"
                 />
-                <span
-                  class="text-xs font-bold px-2.5 py-1 rounded-lg min-w-[40px] text-center border border-white/5"
-                  :class="form.stress_level_score > 60 ? 'text-danger-400 bg-danger-500/10' : form.stress_level_score > 30 ? 'text-warning-400 bg-warning-500/10' : 'text-success-400 bg-success-500/10'"
-                >
-                  {{ form.stress_level_score }}
-                </span>
+                <div class="flex justify-between text-[8px] text-surface-500 mt-0.5">
+                  <span>Rileks</span>
+                  <span>Stres</span>
+                </div>
               </div>
             </div>
           </div>

@@ -881,7 +881,8 @@ const actions = [
             min="1"
             max="100"
             :disabled="isSubmitting"
-            class="w-full h-1.5 bg-surface-700 rounded-lg appearance-none cursor-pointer accent-primary-500 disabled:opacity-50"
+            class="custom-range-slider w-full"
+            :style="{ '--thumb-color': 'var(--primary-500)' }"
           />
         </div>
 
