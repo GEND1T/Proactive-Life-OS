@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { Plus } from 'lucide-vue-next'
 import AIInsightCard from '../components/shared/AIInsightCard.vue'
 import BalanceCards from '../components/finance/BalanceCards.vue'
@@ -7,9 +7,11 @@ import TransactionList from '../components/finance/TransactionList.vue'
 import AddTransactionModal from '../components/finance/AddTransactionModal.vue'
 import { useFinanceDB } from '../composables/useFinanceDB'
 import { useFormatters } from '../composables/useFormatters'
+import { useAIInsight } from '../composables/useAIInsight'
 
 const { formatCurrency } = useFormatters()
-const { totalBalance, dailyBudget, todaySpending, fetchTransactions, isLoading } = useFinanceDB()
+const { totalBalance, dailyBudget, todaySpending, transactions, fetchTransactions, isLoading } = useFinanceDB()
+const { insight: aiInsight, isLoading: aiLoading, source: aiSource, fetchInsight } = useAIInsight()
 
 const showAddModal = ref(false)
 
@@ -18,9 +20,41 @@ const spendingPercentage = computed(() => {
   return Math.min(100, Math.round((todaySpending.value / dailyBudget.value) * 100))
 })
 
+const topCategory = computed(() => {
+  const cats = {}
+  ;(transactions.value || []).forEach(t => {
+    if ((t.transaction_type || '').toLowerCase() === 'expense') {
+      const cat = t.category || 'Lainnya'
+      cats[cat] = (cats[cat] || 0) + Math.abs(t.amount)
+    }
+  })
+  const sorted = Object.entries(cats).sort((a, b) => b[1] - a[1])
+  return sorted[0]?.[0] || 'Lainnya'
+})
+
+const financeInsightMessage = computed(() => aiInsight.value || 'Memuat insight...')
+
+function loadFinanceInsight(forceRefresh = false) {
+  const ctx = {
+    balance: totalBalance.value || 0,
+    todaySpending: todaySpending.value || 0,
+    dailyBudget: dailyBudget.value || 0,
+    spendingPercentage: spendingPercentage.value,
+    recentTransactionsCount: (transactions.value || []).length,
+    topCategory: topCategory.value,
+  }
+  fetchInsight('finance', ctx, forceRefresh)
+}
+
 onMounted(() => {
   fetchTransactions()
 })
+
+watch([totalBalance, todaySpending, transactions], () => {
+  if (!isLoading.value) {
+    loadFinanceInsight()
+  }
+}, { deep: true })
 </script>
 
 <template>
@@ -28,9 +62,12 @@ onMounted(() => {
     <!-- AI Insight -->
     <AIInsightCard
       title="AI Finance Analysis"
-      message="Pengeluaran makananmu minggu ini naik 20% dibanding minggu lalu. Ada 3 pembelian impulsif senilai total Rp 294rb — pertimbangkan masak di rumah untuk menghemat. Saldo totalmu masih aman di Rp 5.5jt."
-      timestamp="2 menit lalu"
+      :message="financeInsightMessage"
+      :loading="aiLoading"
+      :source="aiSource"
+      timestamp="Baru saja"
       icon="💳"
+      @refresh="loadFinanceInsight(true)"
     />
 
     <!-- Total Balance Summary -->

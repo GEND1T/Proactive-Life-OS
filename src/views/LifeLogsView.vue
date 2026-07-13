@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { 
   Footprints, Heart, Brain, Moon, Code, Sparkles, Smartphone, Plus
 } from 'lucide-vue-next'
@@ -10,9 +10,11 @@ import CodingChart from '../components/lifelogs/CodingChart.vue'
 import AddActivityLogModal from '../components/lifelogs/AddActivityLogModal.vue'
 import { useActivityDB } from '../composables/useActivityDB'
 import { useFormatters } from '../composables/useFormatters'
+import { useAIInsight } from '../composables/useAIInsight'
 
 const { formatMinutesToHours } = useFormatters()
 const { todayLog, weeklyStats, fetchActivityLogs } = useActivityDB()
+const { insight: aiInsight, isLoading: aiLoading, source: aiSource, fetchInsight } = useAIInsight()
 
 const showAddLogModal = ref(false)
 
@@ -24,16 +26,39 @@ const stepsPercentage = computed(() => Math.min(100, Math.round(((todayLog.value
 const sleepPercentage = computed(() => Math.min(100, Math.round(((todayLog.value?.sleep_duration_minutes || 0) / 480) * 100)))
 const screenPercentage = computed(() => Math.min(100, Math.round(((todayLog.value?.screen_time_minutes || 0) / 360) * 100)))
 const isScreenTimeOver = computed(() => (todayLog.value?.screen_time_minutes || 0) > 360)
+
+const lifeLogsInsightMessage = computed(() => aiInsight.value || 'Memuat insight...')
+
+function loadLifeLogsInsight(forceRefresh = false) {
+  const log = todayLog.value || {}
+  const ctx = {
+    sleepHours: log.sleep_duration_minutes ? Math.round(log.sleep_duration_minutes / 60 * 10) / 10 : 0,
+    deepSleepMinutes: log.deep_sleep_minutes || 0,
+    steps: log.steps_count || 0,
+    screenTimeHours: log.screen_time_minutes ? Math.round(log.screen_time_minutes / 60 * 10) / 10 : 0,
+    codingHours: log.wakatime_coding_hours || 0,
+    heartRate: log.resting_heart_rate || 0,
+    stress: log.stress_level_score || 0,
+  }
+  fetchInsight('lifelogs', ctx, forceRefresh)
+}
+
+watch(todayLog, () => {
+  loadLifeLogsInsight()
+}, { deep: true })
 </script>
 
 <template>
   <div class="stagger-children">
     <!-- AI Insight -->
     <AIInsightCard
-      title="AI Habit Analysis"
-      message="Tidur siangmu kemarin 1.5 jam membuat screen time malammu meningkat 35%. Pola coding-mu paling produktif di hari Kamis (7.3 jam). Coba tidur sebelum jam 23:00 untuk kualitas deep sleep yang lebih baik."
-      timestamp="8 menit lalu"
+      title="AI Health Analysis"
+      :message="lifeLogsInsightMessage"
+      :loading="aiLoading"
+      :source="aiSource"
+      timestamp="Baru saja"
       :icon="Sparkles"
+      @refresh="loadLifeLogsInsight(true)"
     />
 
     <!-- Mini Stats Row -->

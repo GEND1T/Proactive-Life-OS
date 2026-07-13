@@ -1,0 +1,670 @@
+{
+  "name": "Life-OS: Sleep & Morning Routine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sleep-tracker",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        16
+      ],
+      "id": "013f6db8-6565-4774-bd17-1872d18c5f6b",
+      "name": "Webhook",
+      "webhookId": "e386e4c6-8032-42d1-b179-512699fa99b9"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "sleep_tracking_started",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "685f9f06-3829-4aa8-b4de-e66f4a5ed6f3"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "start"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "dc51f93a-70ee-4afe-8582-020f28fba2dd",
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "alarm_alert_dismiss",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "alarm"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c925322f-b999-4dde-bd11-3d4c5915fcf2",
+                    "leftValue": "={{ $json.body.event }}",
+                    "rightValue": "=sleep_tracking_stopped",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "end"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "d57c506a-2945-45b9-8bdd-4c7a48490478",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Memanggil memori internal n8n yang bertahan antar-eksekusi\nconst staticData = $getWorkflowStaticData('global');\n\n// Mencatat waktu mulai tidur dalam format epoch/milidetik\nstaticData.sleepStartTimestamp = $now.toMillis();\n\n// 🔥 TAMBAHAN: Mendapatkan jam lokal Asia/Jakarta (format 24 jam, contoh: \"14\" atau \"23\")\nconst currentHour = parseInt($now.setZone(\"Asia/Jakarta\").toFormat(\"H\"));\n\nreturn [{\n  json: {\n    status: \"Stopwatch tidur dimulai\",\n    start_time: staticData.sleepStartTimestamp,\n    current_hour: currentHour // Datetime konteks untuk AI (angka 0-23)\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -160
+      ],
+      "id": "853345fa-144f-4517-a59f-929e279026e8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/activity_logs?on_conflict=logged_date,session_start",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.toJsonString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        48
+      ],
+      "id": "89c368f2-aa7a-4597-8ed0-615fce87d670",
+      "name": "HTTP Request",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"model\": \"llama-3.1-8b-instant\",\n    \"temperature\": 0.5,\n    \"messages\": [\n      {\n        \"role\": \"system\",\n        \"content\": \"Anda adalah 'The Strategist', asisten AI Afin. Tugas Anda adalah memberikan 'Morning Briefing' yang cerdas berdasarkan jadwal kuliahnya hari ini. Analisis waktu luang di luar jam kuliahnya. Sarankan aktivitas taktis secara logis di celah waktu kosong tersebut (misal: jika kuliah baru mulai siang, sarankan sarapan dan coding project di pagi hari. Jika antar kuliah ada jeda 3 jam, sarankan makan siang dan review tugas). Gunakan bahasa Indonesia yang berwibawa dan suportif. Maksimal 3 paragraf.\"\n      },\n      {\n        \"role\": \"user\",\n        \"content\": $json.formatted_schedule\n      }\n    ]\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        976,
+        240
+      ],
+      "id": "c715ac84-401d-4a3b-b91c-98c5d13e9ae5",
+      "name": "HTTP Request1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"chatId\": \"222788627513504@lid\",\n    \"text\": \"☀️ *MORNING INITIATED*\\n\\n\" + $json.choices[0].message.content,\n    \"session\": \"default\"\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1168,
+        240
+      ],
+      "id": "49887511-2921-4568-96df-4683e3f25771",
+      "name": "HTTP Request8",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"chatId\": \"222788627513504@lid\",\n    \"text\": \"🛏️ *SLEEP TRACKER*\\n\\n\" + $json.choices[0].message.content,\n    \"session\": \"default\"\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        848,
+        -160
+      ],
+      "id": "d434549b-d918-4787-b15e-d17e58a1a14f",
+      "name": "HTTP Request9",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Memanggil kembali memori internal n8n\nconst staticData = $getWorkflowStaticData('global');\n\nconst opsiJakarta = {\n  timeZone: 'Asia/Jakarta',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  second: '2-digit',\n  hour12: false\n};\n\n// Pengformat otomatis\nconst formatter = new Intl.DateTimeFormat('en-US', opsiJakarta);\n\nfunction formatKeIso(ts) {\n  const bagian = formatter.formatToParts(new Date(ts));\n  const d = Object.fromEntries(bagian.map(b => [b.type, b.value]));\n  // Menghasilkan format standar: YYYY-MM-DDTHH:mm:ss\n  return `${d.year}-${d.month}-${d.day}T${d.hour}:${d.minute}:${d.second}`;\n}\n\n// 1. Mengambil waktu mulai dari memori.\nconst startTs = staticData.sleepStartTimestamp;\nconst endTs = new Date().getTime();\n\n// 2. PROTEKSI DATA KETAT\n// Jika tidak ada memori startTs (webhook mulai terlewat/gagal),\n// kita HENTIKAN alur di sini agar tidak mengirim data sampah/halusinasi ke database.\nif (!startTs) {\n  return []; \n}\n\n// 3. Menghitung selisih waktu menjadi menit\nconst sleepMinutes = Math.round((endTs - startTs) / 60000);\n\n// 4. KATEGORISASI TIDUR CERDAS\nlet sleepType = \"Tidur Utama\";\nif (sleepMinutes <= 180) { \n  // Jika durasi di bawah 3 jam, asumsikan ini tidur siang atau sesi lanjut tidur\n  sleepType = \"Tidur Siang / Ekstra\";\n}\n\n// 5. Menghapus memori agar bersih untuk sesi tidur berikutnya (di hari yang sama)\nstaticData.sleepStartTimestamp = undefined;\n\n// 6. Menyiapkan paket data kaya untuk database\nreturn [{\n  json: {\n    // Format YYYY-MM-DD yang aman untuk zona waktu Jakarta\n    logged_date: new Date(endTs).toLocaleString('en-CA', {timeZone: 'Asia/Jakarta'}).split(',')[0],\n    sleep_duration_minutes: sleepMinutes,\n    sleep_type: sleepType,\n    session_start: formatKeIso(startTs),\n    session_end: formatKeIso(endTs)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        48
+      ],
+      "id": "c050c4c1-8740-4cd1-aea7-1d43f3cad6d0",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "timeMin": "={{ $now.setZone('Asia/Jakarta').startOf('day').toISO() }}",
+        "timeMax": "={{ $now.setZone('Asia/Jakarta').endOf('day').toISO() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        240
+      ],
+      "id": "2991024d-ccca-4807-af73-536324f4eb9b",
+      "name": "Get many events",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all();\nlet scheduleText = \"JADWAL KULIAH AFIN HARI INI:\\n\";\n\nif (events.length === 0 || !events[0].json.summary) {\n  scheduleText += \"- TIDAK ADA JADWAL KULIAH (Hari ini kosong!).\\n\";\n} else {\n  for (const item of events) {\n    const ev = item.json;\n    \n    // Memaksa mesin JavaScript n8n merender waktu dalam zona Asia/Jakarta secara absolut\n    const startHour = new Date(ev.start.dateTime).toLocaleTimeString('id-ID', {\n      timeZone: 'Asia/Jakarta', \n      hour: '2-digit', \n      minute: '2-digit'\n    }).replace('.', ':'); // Mengubah titik menjadi titik dua (contoh: 13.10 jadi 13:10)\n\n    const endHour = new Date(ev.end.dateTime).toLocaleTimeString('id-ID', {\n      timeZone: 'Asia/Jakarta', \n      hour: '2-digit', \n      minute: '2-digit'\n    }).replace('.', ':');\n    \n    scheduleText += `- ${ev.summary} (${startHour} - ${endHour}) di ${ev.location || 'Kelas'}\\n`;\n  }\n}\n\nreturn [{ json: { formatted_schedule: scheduleText } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        240
+      ],
+      "id": "28f88ef5-c9df-42c5-a4bc-c79e6a61b064",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.sleep_type }}",
+                    "rightValue": "Tidur Utama",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "bd587c3a-92c7-49d6-8872-b7044b26fa53"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "75ac454b-456b-4ccd-934c-9d815aaa33c4",
+                    "leftValue": "={{ $json.sleep_type }}",
+                    "rightValue": "Tidur Siang / Ekstra",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        304
+      ],
+      "id": "cd5f0f2f-464b-4dfc-88dc-08e474a9960e",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n  \"text\": \"🔋 *SLEEP LOGGED* \\n\\n{{ $json.choices[0].message.content }}\\n\\n_Catatan: Data durasi tidur otomatis disimpan ke database._\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        784,
+        400
+      ],
+      "id": "29476426-a6d4-4cd7-b698-266031f8b2a8",
+      "name": "HTTP Request10",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.5, \n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Kamu adalah asisten AI personal yang sangat perhatian dan peka terhadap waktu. Tugasmu adalah menyapa pengguna yang baru saja mengaktifkan stopwatch tidur berdasarkan data 'current_hour' (format 24 jam) yang dikirimkan.\\n\\nAnalisis waktu tidur berdasarkan parameter 'current_hour' berikut:\\n\\n1. Pagi s/d Siang (Jam 11:00 - 15:59) -> TIDUR SIANG / NAP:\\n   - Sapa dengan santai untuk 'power nap' atau tidur siang singkat.\\n   - Contoh: 'Selamat tidur siang! Istirahat bentar 20-30 menit biar nanti bangun-bangun badan langsung segar lagi ya.'\\n\\n2. Malam Normal (Jam 19:00 - 23:59) -> TIDUR MALAM STANDAR:\\n   - Berikan ucapan selamat malam yang hangat dan menenangkan.\\n   - Ingatkan untuk meredupkan lampu dan menjauhkan HP.\\n   - Contoh: 'Hari yang panjang udah selesai, yuk saatnya istirahat. Selamat tidur malam, semoga mimpi indah ya.'\\n\\n3. Subuh / Larut Malam (Jam 00:00 - 04:59) -> TIDUR LARUT / BEGADANG:\\n   - Berikan perhatian ekstra karena mereka tidur terlalu larut.\\n   - Ingatkan untuk langsung memejamkan mata tanpa main HP lagi karena sudah subuh.\\n   - Contoh: 'Wah, udah larut banget nih. Kamu pasti capek banget begadang. Yuk langsung merem, selamat istirahat total ya!'\\n\\n4. Waktu Lainnya (Jam 05:00 - 10:59 atau 16:00 - 18:59) -> TIDUR DILUAR JADWAL / BALAS DENDAM:\\n   - Berikan ucapan tidur atau istirahat yang fleksibel tanpa menghakimi.\\n   - Contoh: 'Jam tidur kamu agak tidak biasa nih, tapi tubuh kamu pasti butuh rehat. Selamat istirahat dan pulihkan energimu!'\\n\\nAturan Format & Gaya Bahasa:\\n- Gunakan bahasa Indonesia kasual, lembut, dan bersahabat ('kamu', 'ya', 'yuk'). JANGAN kaku.\\n- Gunakan format bold '*' hanya pada frasa penting (misal: *selamat tidur siang*, *selamat istirahat*).\\n- Panjang pesan maksimal 3 kalimat agar pas dibaca di layar HP.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Jam tidurku saat ini menunjukkan pukul (format 24, jam 1am-11am dan 12pm-24pm): {{ $json.current_hour }}. Buatkan pesan pengantar tidur yang relevan untukku.\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        -160
+      ],
+      "id": "023b0256-46b8-4fff-9054-e1bd70a96cc7",
+      "name": "HTTP Request2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.5, \n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Kamu adalah asisten kesehatan personal yang interaktif dan suportif. Tugasmu adalah menyapa pengguna yang baru saja bangun tidur berdasarkan durasi tidur dalam satuan menit ('sleep_duration_minutes') yang dikirimkan.\\n\\nAnalisis durasi tidur tersebut menggunakan logika berikut:\\n\\n1. Kurang dari 30 Menit -> POWER NAP:\\n   - Berikan apresiasi karena sudah mengambil istirahat cepat untuk mengisi energi.\\n   - Contoh: 'Mantap! Power nap singkat berdurasi [jam/menit] sukses menyegarkan harimu kembali. Yuk, lanjut aktivitas dengan fokus penuh! ⚡'\\n\\n2. Rentang 30 Menit s/d 90 Menit -> DEEP NAP / TIDUR SIANG CUKUP:\\n   - Katakan bahwa ini adalah durasi tidur siang yang ideal untuk mengistirahatkan otak.\\n   - Contoh: 'Sesi tidur siangmu selama [jam/menit] beres! Otak dan tubuh sekarang harusnya sudah jauh lebih rileks dan siap produktif lagi. 🧠✨'\\n\\n3. Lebih dari 90 Menit (Diatas 1.5 Jam) -> OVER-SLEEPING / TIDUR EKSTRA:\\n   - Berikan sapaan yang agak menggoda/bercanda karena tidurnya terlalu lama, lalu ingatkan untuk minum air putih agar tidak pusing atau lemas.\\n   - Contoh: 'Wah, nyenyak banget ya sampai [jam/menit]! Tidur ekstranya puas banget nih. Yuk, buruan minum air putih biar kepalanya gak pusing setelah bangun! 💧🛌'\\n\\nAturan Format & Gaya Bahasa:\\n- Gunakan Bahasa Indonesia yang kasual, ramah, dan bersahabat ('kamu', 'ya', 'yuk'). JANGAN kaku seperti robot.\\n- JANGAN sebutkan angka menit mentah di dalam teks, melainkan konversikan secara alami menjadi jam dan menit atau sebutkan durasinya mengalir dalam kalimat.\\n- Gunakan format bold '*' hanya pada frasa kunci penting.\\n- Panjang pesan maksimal 3 kalimat agar padat dan nyaman dibaca di WhatsApp.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Aku baru saja bangun tidur. Ini data durasi tidurku dalam menit: {{ $json.sleep_duration_minutes }}. Buatkan sapaan bangun tidur yang relevan untukku.\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        400
+      ],
+      "id": "42e69241-ac8e-4339-bc0d-f157c89b9ce4",
+      "name": "HTTP Request3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "dynamic",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "Asia/Jakarta"
+  },
+  "versionId": "653ede0a-f6d0-4ef1-8b81-250d3f6886bc",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb4ec7fed4887f4cc81d7810d7b72ed88c4ac7714b865ebd1438277ded8f8e8b"
+  },
+  "nodeGroups": [],
+  "id": "LFdB0jkPukvJHwR4",
+  "tags": []
+}

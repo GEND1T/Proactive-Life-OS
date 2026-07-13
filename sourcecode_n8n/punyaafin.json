@@ -1,0 +1,2807 @@
+{
+  "name": "punyaafin",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "utama",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -480,
+        0
+      ],
+      "id": "dcd38570-15da-4d22-8c85-cd3046048c39",
+      "name": "waha-inbound",
+      "webhookId": "b7852a0c-7b6e-4288-9c95-dc9b0ea4e865"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b99f03ae-e3a6-4292-b4a6-8d4a18fe0715",
+              "leftValue": "={{ $json.body.payload.fromMe }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "80707590-db10-44c7-a6f3-4a32fbc28dc8",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -272,
+        0
+      ],
+      "id": "b701bbdc-e5b5-4684-b68a-aa69a8c0a531",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "12eb708e-8234-44f6-88c8-a6f847aa56e0",
+              "name": "sender_number",
+              "value": "={{ $('waha-inbound').item.json.body.payload.from }}",
+              "type": "string"
+            },
+            {
+              "id": "d107d38b-afb7-4b22-86bc-3fe4102f3296",
+              "name": "message_type",
+              "value": "={{ $('waha-inbound').item.json.body.payload._data.type }}",
+              "type": "string"
+            },
+            {
+              "id": "328ea1e6-72c2-4ca3-85ba-015410032adb",
+              "name": "message_content",
+              "value": "={{ $('waha-inbound').item.json.body.payload._data.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        816,
+        -112
+      ],
+      "id": "abedea18-3654-4373-996c-17dc1f3e80d5",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah agen klasifikasi untuk Proactive Life-OS. Tugas Anda mengategorikan pesan pengguna ke dalam opsi berikut secara ketat:\\n\\n1. 'FINANCE': KHUSUS UNTUK SEMUA URUSAN UANG. Baik itu MENCATAT transaksi (Contoh: 'beli bensin 30rb'), maupun CEK SALDO / LAPORAN KEUANGAN (Contoh: 'tampilkan sisa saldo saya', 'rekap pengeluaran').\\n2. 'SCHEDULE': Jika pesan berisi agenda, janji temu, tenggat waktu proyek, atau pemindahan kalender.\\n3. 'COMMAND': Jika pesan berupa instruksi sistem, perangkat keras, atau tugas asisten AI umum (Contoh: 'status server online?', 'nyalakan alarm', 'buatkan rangkuman artikel ini').\\n4. 'GENERAL': Jika berupa obrolan santai, pertanyaan umum, atau keluhan.\\n\\nAnda WAJIB mengembalikan jawaban dalam format JSON mentah:\\n{\\n  \\\"category\\\": \\\"NAMA_KATEGORI\\\",\\n  \\\"confidence\\\": 0.00,\\n  \\\"summary\\\": \\\"Ringkasan singkat pesan\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Edit Fields').item.json.message_content }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1328,
+        -96
+      ],
+      "id": "617b49a7-cba7-4ae1-a2bc-066c8710ba80",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.choices[0].message.content);\n\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -96
+      ],
+      "id": "bcdcf53f-e2db-4fd9-9f18-fd0609dc1aa4",
+      "name": "Parser JSON"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "FINANCE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "ebbf8154-4b1d-4f0d-a634-7fb38bf240c1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "0"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "934e35a3-6db5-460c-9cb9-eb7086627793",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "SCHEDULE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "1"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "89634bbb-d9e9-4dde-a960-7666889b37dc",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "COMMAND",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "2"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b6be1a54-ba3c-49ec-81a7-4f89c3344804",
+                    "leftValue": "={{ $json.category }}",
+                    "rightValue": "GENERAL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "3"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1728,
+        -128
+      ],
+      "id": "37ca9691-f8b9-4313-8c71-b06d9863f714",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n  \"role\": \"system\",\n  \"content\": \"Anda adalah manajer kalender cerdas.\\nWaktu sekarang: {{ new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }) }} WIB.\\nHari ini: {{ new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' }) }}\\nBesok: {{ new Date(Date.now() + 86400000).toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' }) }}\\n\\n{{ $json.calendar_cheat_sheet.replace(/\\n/g, '\\\\n') }}\\n\\nATURAN PENENTUAN TANGGAL (HARGA MATI - DILARANG MENGHITUNG MANUAL):\\n1. Cari kata kunci hari (Senin/Selasa/Rabu/Kamis/Jumat/Sabtu/Minggu) dalam perintah user.\\n2. Jika ada, TRANSLATE ke bahasa Inggris.\\n3. LIHAT 'REFERENSI TANGGAL 7 HARI KE DEPAN'. COPY persis tanggal dari hari tersebut.\\n4. DILARANG KERAS menggunakan tanggal 'Hari ini' untuk start_datetime jika user secara spesifik menyebut hari lain!\\n\\nATURAN AKSI:\\n- 'CREATE_EVENT': Jadwal sekali jalan.\\n- 'CREATE_RECURRING': Jadwal rutinan/berulang. WAJIB mulai di tanggal kejadian pertama sesuai hari yang diminta.\\n- 'RESCHEDULE_EVENT': Pindah jam/hari jadwal lama.\\n- 'EDIT_EVENT': Ubah lokasi/detail tanpa pindah jam.\\n- 'DELETE_EVENT': Batalkan jadwal.\\n\\nATURAN KHUSUS RESCHEDULE_EVENT:\\n- 'old_datetime_reference': Tanggal WAKTU LAMA (Jadwal asal).\\n- Jika user HANYA minta pindah hari tanpa menyebutkan jam baru, WAJIB atur jam `start_datetime` ke T00:00:00+07:00.\\n\\nOutput HARUS JSON murni dengan urutan SEPERTI INI (Wajib isi `_reasoning_hari` lebih dulu untuk menganalisis tanggal!):\\n{\\n  \\\"_reasoning_hari\\\": \\\"(Tuliskan analisis Anda: 'User minta hari X. Hari X di referensi adalah tanggal Y. Maka start_datetime menggunakan tanggal Y')\\\",\\n  \\\"action\\\": \\\"...\\\",\\n  \\\"target_search\\\": \\\"(Hanya diisi jika reschedule/edit/delete)\\\",\\n  \\\"old_datetime_reference\\\": \\\"(Hanya diisi jika reschedule)\\\",\\n  \\\"title\\\": \\\"...\\\",\\n  \\\"start_datetime\\\": \\\"(Format ISO 8601: AWAS! Gunakan tanggal hasil analisis di _reasoning_hari beserta jamnya!)\\\",\\n  \\\"end_datetime\\\": \\\"(Format ISO 8601: Samakan tanggalnya dengan start_datetime beserta jam selesainya!)\\\",\\n  \\\"location\\\": \\\"...\\\",\\n  \\\"description\\\": \\\"...\\\",\\n  \\\"recurrence\\\": [\\\"(RRULE string jika rutinan)\\\"]\\n}\"\n},\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Edit Fields').item.json.message_content || $json.message_content }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2272,
+        -160
+      ],
+      "id": "de53f466-d7ba-485f-9407-ce67ea52a7d5",
+      "name": "HTTP Request3",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah manajer keuangan pribadi cerdas untuk Proactive Life-OS. PENTING: Waktu sekarang secara absolut adalah {{ new Date().toLocaleString() }}.\\n\\nATURAN MATEMATIKA NOMINAL:\\n- Jika pengguna menggunakan singkatan 'rb' atau 'k' (contoh: 120rb, 15k), kalikan dengan 1.000 menjadi 120000.\\n- Jika menggunakan 'jt' atau 'm' (contoh: 2jt), kalikan dengan 1.000.000 menjadi 2000000.\\n- Hilangkan semua titik atau koma pada hasil akhir nominal.\\n\\nATURAN METHOD & ACTION:\\n- Kelompokkan payment_method konsisten (GoPay, DANA, ShopeePay, OVO, QRIS, BI-FAST, Tunai).\\n- Tentukan transaction_type: 'INCOME' (pemasukan), 'EXPENSE' (pengeluaran).\\n- Tentukan action: 'CREATE_TRANSACTION' (mencatat baru), 'CHECK_BALANCE' (cek saldo), 'GENERATE_REPORT'(rekap,laporan,keuangan), 'UPDATE_TRANSACTION' (mengubah/mengedit data lama misal: ubah saldo/ubah sumber pengeluaran/ubah nominal), atau 'DELETE_TRANSACTION' (menghapus data).\\n\\n- Untuk 'category', Anda HANYA BOLEH memilih dari daftar baku ini: ['Konsumsi', 'Transportasi', 'E-Commerce', 'Infrastruktur IT', 'Pendidikan', 'Pendapatan', 'Mutasi', 'Lainnya']. Jangan buat kategori di luar daftar ini.\\n\\nATURAN PENCARIAN (KHUSUS UPDATE/DELETE):\\n- Ekstrak kata benda utama yang ingin diubah/dihapus ke 'search_keyword' (Misal: 'hapus beli bensin kemarin' -> keyword: 'bensin').\\n- Tentukan 'search_date' dalam format YYYY-MM-DD. Jika tidak disebutkan, gunakan tanggal hari ini. Jika 'kemarin', kurangi 1 hari, jika menyebutkan jumlah hari yang lalu kurangi tanggal hari ini dengan jumlah hari tersebut, jika menyebutkan tanggal gunakan tanggal tersebut dan pertahankan bulan {{ new Date().toLocaleString('id-ID', { month: '2-digit' }) }} dan tahun {{ new Date().toLocaleString('id-ID', { year: 'numeric' }) }}\\n\\nOutput HARUS JSON murni tanpa markdown:\\n{\\n  \\\"action\\\": \\\"CREATE_TRANSACTION\\\" atau \\\"CHECK_BALANCE\\\" atau \\\"DELETE_TRANSACTION\\\" atau \\\"UPDATE_TRANSACTION\\\",\\n  \\\"transaction_type\\\": \\\"INCOME\\\" atau \\\"EXPENSE\\\",\\n  \\\"amount\\\": (Angka murni. Isi 0 jika hanya cek/hapus/ubah(proses update) tanpa memberikan nominal),\\n  \\\"category\\\": \\\"(Kategori transaksi)\\\",\\n  \\\"payment_method\\\": \\\"(Nama dompet digital/metode)\\\",\\n  \\\"description\\\": \\\"(Konteks transaksi)\\\",\\n  \\\"is_impulsive\\\": (true/false),\\n  \\\"search_keyword\\\": \\\"(HANYA diisi untuk UPDATE/DELETE)\\\",\\n  \\\"search_date\\\": \\\"(HANYA diisi untuk UPDATE/DELETE. Format YYYY-MM-DD)\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Edit Fields').item.json.message_content }}\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2096,
+        -448
+      ],
+      "id": "8be1ec46-782d-44d3-bc79-91ad1b6c6a96",
+      "name": "HTTP Request11",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.choices[0].message.content);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        -448
+      ],
+      "id": "8803c1c4-2d41-45a7-9c16-693ec6bc3ba8",
+      "name": "Parser JSON5"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "CREATE_TRANSACTION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e5bd6ecc-449e-427e-b2eb-f1c630bc19c7"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CREATE_TRANSACTION"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bcc53670-c520-46c9-bf57-a62148f383f5",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "CHECK_BALANCE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CHECK_BALANCE"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9f1ba454-e257-4322-b348-a4c4752e41cf",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "DELETE_TRANSACTION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DELETE_TRANSACTION"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "da7c7f95-100b-487d-9081-0b2eb8a6b3dd",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "UPDATE_TRANSACTION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "UPDATE_TRANSACTION"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9629cb04-394f-4b8d-b0ed-604018a12ee0",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "GENERATE_REPORT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "GENERATE_REPORT"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2496,
+        -656
+      ],
+      "id": "61bbd364-477c-44f6-b2ca-7a4cf1017725",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/financial_logs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"amount\": {{ $json.amount }},\n  \"category\": \"{{ $json.category }}\",\n  \"payment_method\": \"{{ $json.payment_method }}\",\n  \"description\": \"{{ $json.description }}\",\n  \"is_impulsive\": {{ $json.is_impulsive }},\n  \"transaction_type\": \"{{ $json.transaction_type }}\",\n  \"transaction_date\": \"{{ $now.setZone('Asia/Jakarta').toISODate() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        -848
+      ],
+      "id": "1a531db4-15b3-441a-9811-b12306031ecd",
+      "name": "HTTP Request12",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"✅ *Transaksi Berhasil Dicatat*\\n\\nJenis: *{{ $json.transaction_type }}*\\nNominal: Rp{{ $json.amount.toLocaleString('id-ID') }}\\nSumber: {{ $json.payment_method }}\\nKategori: {{ $json.category }}\\nCatatan: {{ $json.description }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3200,
+        -848
+      ],
+      "id": "68891f12-5ac5-4cc6-895d-7bb05e4ddfa4",
+      "name": "HTTP Request13",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/wallet_balances",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        -688
+      ],
+      "id": "1e99ac21-5c52-43c8-bd0e-1c7bd0eee49e",
+      "name": "HTTP Request14",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const balances = $input.all();\nlet reply = \"💰 *LAPORAN SALDO REAL-TIME*\\n\\n\";\n\nif (balances.length === 0) {\n  reply += \"Belum ada riwayat transaksi tercatat.\";\n} else {\n  balances.forEach(item => {\n    const data = item.json;\n    reply += `- *${data.payment_method}*: Rp${Number(data.real_balance).toLocaleString('id-ID')}\\n`;\n  });\n}\nreturn [{ json: { text_message: reply } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        -688
+      ],
+      "id": "9eea4b71-c875-47a0-ae43-fb57c2ffdd69",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"{{ $json.text_message.replace(/\\n/g, '\\\\n') }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3296,
+        -688
+      ],
+      "id": "5c8da333-bed0-4df4-9d45-73e92bdbacfe",
+      "name": "HTTP Request15",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/financial_logs?description=ilike.*{{ $('Parser JSON5').item.json.search_keyword }}*&transaction_date=eq.{{ $('Parser JSON5').item.json.search_date }}&limit=1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"amount\": {{ $json.amount }},\n  \"category\": \"{{ $json.category }}\",\n  \"payment_method\": \"{{ $json.payment_method }}\",\n  \"description\": \"{{ $json.description }}\",\n  \"is_impulsive\": {{ $json.is_impulsive }},\n  \"transaction_type\": \"{{ $json.transaction_type }}\",\n  \"transaction_date\": \"{{ $now.setZone('Asia/Jakarta').toISODate() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        -544
+      ],
+      "id": "691919a2-fb2e-41c0-866e-c1345ce14f56",
+      "name": "HTTP Request16",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "426fd0d4-50ca-4517-b140-85f612e754e7",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3120,
+        -544
+      ],
+      "id": "c71480e4-cf51-4983-bda4-6605aa2c0b3c",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "method": "DELETE",
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/financial_logs?id=eq.{{ $json.id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"amount\": {{ $json.amount }},\n  \"category\": \"{{ $json.category }}\",\n  \"payment_method\": \"{{ $json.payment_method }}\",\n  \"description\": \"{{ $json.description }}\",\n  \"is_impulsive\": {{ $json.is_impulsive }},\n  \"transaction_type\": \"{{ $json.transaction_type }}\",\n  \"transaction_date\": \"{{ $now.setZone('Asia/Jakarta').toISODate() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3312,
+        -544
+      ],
+      "id": "fa577962-1fa5-4675-a4a6-181eae08997d",
+      "name": "HTTP Request17",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"🗑️ *Data Dihapus*\\nTransaksi terkait *{{ $('Parser JSON5').item.json.search_keyword }}* seharga *Rp.{{ $json.amount.toLocaleString('id-ID') }}* pada *{{ new Date($json.transaction_date).toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Jakarta' }) }}* telah berhasil dihapus dari sistem.\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3504,
+        -544
+      ],
+      "id": "f8277c65-b230-458e-924b-9e193072d60f",
+      "name": "HTTP Request18",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/financial_logs?description=ilike.*{{ $json.search_keyword }}*&transaction_date=eq.{{ $json.search_date }}&limit=1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"amount\": {{ $json.amount }},\n  \"category\": \"{{ $json.category }}\",\n  \"payment_method\": \"{{ $json.payment_method }}\",\n  \"description\": \"{{ $json.description }}\",\n  \"is_impulsive\": {{ $json.is_impulsive }},\n  \"transaction_type\": \"{{ $json.transaction_type }}\",\n  \"transaction_date\": \"{{ $now.setZone('Asia/Jakarta').toISODate() }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2768,
+        -400
+      ],
+      "id": "14e51339-3c98-4afa-af10-41f61e8e5c89",
+      "name": "HTTP Request19",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "426fd0d4-50ca-4517-b140-85f612e754e7",
+              "leftValue": "={{ $json.id_transaksi }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3120,
+        -400
+      ],
+      "id": "afb57be4-2c76-4154-a1fd-c9191d7b0f24",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/financial_logs?id=eq.{{ $json.id_transaksi }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.payload) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3312,
+        -400
+      ],
+      "id": "9c3f9c2b-bf83-4074-b36f-e34d69a097a7",
+      "name": "HTTP Request20",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"chatId\": $('Edit Fields').item.json.sender_number,\n    \"text\": \"✏️ *TRANSAKSI BERHASIL DIPERBARUI*\\n\\nAsisten telah melakukan penyesuaian pada database finansial Anda.\\n\\n🔄 *Perubahan Yang Diterapkan:* \\n\" + \n    ($('Code in JavaScript3').item.json.payload.payment_method ? \"• Sumber Dana: \" + $('Code in JavaScript3').item.json.payment_method_lama + \" ➡️ *\" + $('Code in JavaScript3').item.json.payload.payment_method + \"*\\n\" : \"\") +\n    ($('Code in JavaScript3').item.json.payload.amount ? \"• Nominal: Rp\" + $('Code in JavaScript3').item.json.amount_lama.toLocaleString('id-ID') + \" ➡️ *Rp\" + $('Code in JavaScript3').item.json.payload.amount.toLocaleString('id-ID') + \"*\\n\" : \"\") +\n    ($('Code in JavaScript3').item.json.payload.description ? \"• Catatan: \" + $('Code in JavaScript3').item.json.deskripsi_lama + \" ➡️ *\" + $('Code in JavaScript3').item.json.payload.description + \"*\\n\" : \"\") +\n    \"\\nSistem saldo real-time telah disinkronkan kembali.\",\n    \"session\": \"default\"\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3504,
+        -400
+      ],
+      "id": "b5f68f28-dc37-42be-839d-3c26c9221b2c",
+      "name": "HTTP Request21",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Ambil data asli yang barusan ditemukan dari Supabase GET\nconst dataLama = $input.first().json;\n\n// Jika data tidak ditemukan di database, hentikan proses\nif (!dataLama || !dataLama.id) {\n  return [];\n}\n\n// 2. Ambil data instruksi baru dari hasil ekstrak AI (Parser JSON Anda)\n// PENTING: Ganti 'Parser JSON2' sesuai dengan nama node parser finansial Anda\nconst dataBaruAI = $('Parser JSON5').first().json; \n\n// 3. Bangun objek payload dinamis\nconst payloadUpdate = {};\n\n// Kita hanya memasukkan data ke payload JIKA AI mengekstrak nilai baru yang valid\nif (dataBaruAI.amount && dataBaruAI.amount > 0) {\n  payloadUpdate.amount = dataBaruAI.amount;\n}\n\nif (dataBaruAI.payment_method && dataBaruAI.payment_method !== \"\") {\n  // Catatan: Jika AI mendeteksi payment_method baru, kita masukkan ke sini\n  payloadUpdate.payment_method = dataBaruAI.payment_method;\n}\n\nif (dataBaruAI.description && dataBaruAI.description !== \"\") {\n  payloadUpdate.description = dataBaruAI.description;\n}\n\nif (dataBaruAI.category && dataBaruAI.category !== \"\") {\n  payloadUpdate.category = dataBaruAI.category;\n}\n\n// 4. Kirim ID dan Payload yang bersih ke node berikutnya\nreturn [{\n  json: {\n    id_transaksi: dataLama.id,\n    deskripsi_lama: dataLama.description,\n    payment_method_lama: dataLama.payment_method,\n    amount_lama: dataLama.amount,\n    // Payload berisi bidang yang berubah saja\n    payload: payloadUpdate\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2944,
+        -400
+      ],
+      "id": "bad2a5ae-af63-4545-b3a7-82b4aa37a9c5",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah Analis Data Keuangan. Waktu saat ini: {{ new Date().toLocaleString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Asia/Jakarta' }) }}.\\n\\nTugas Anda mengekstrak parameter laporan dari pesan pengguna.\\n\\nOutput HARUS JSON:\\n{\\n  \\\"start_date\\\": \\\"(YYYY-MM-DD. Awal rentang waktu)\\\",\\n  \\\"end_date\\\": \\\"(YYYY-MM-DD. Akhir rentang waktu. Jika hari ini, samakan dengan start_date)\\\",\\n  \\\"target_type\\\": \\\"(Pilih: 'INCOME', 'EXPENSE', atau 'ALL' jika pengguna tidak spesifik)\\\",\\n  \\\"target_method\\\": \\\"(Nama e-wallet/bank spesifik atau Tunai, atau 'ALL' jika semua metode)\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Edit Fields').item.json.message_content }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2656,
+        -896
+      ],
+      "id": "7e9b3e2a-c8a9-4a7a-bbf5-daf481cde250",
+      "name": "HTTP Request22",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.choices[0].message.content);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2928,
+        -1008
+      ],
+      "id": "f1212256-ed33-4160-b8c9-c86420ded10a",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/financial_logs?transaction_date=gte.{{ $json.start_date }}&transaction_date=lte.{{ $json.end_date }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type ",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3120,
+        -1008
+      ],
+      "id": "75a25deb-f41d-41e4-bb49-f3a510dc5759",
+      "name": "HTTP Request23",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        },
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawData = $input.all();\n\n// Mengambil parameter filter dari node AI laporan Anda\nconst filterData = $('Code in JavaScript4').first().json; \n\nlet grandTotalIncome = 0;\nlet grandTotalExpense = 0;\n\n// Objek penampung data yang dikelompokkan\nconst groupedData = {};\n\n// 1. PROSES PENYARINGAN & AKUMULASI DATA\nrawData.forEach(item => {\n  const row = item.json;\n  const method = row.payment_method || \"Lainnya\";\n  \n  // Filter berdasarkan jenis dan metode pembayaran\n  if (filterData.target_type !== \"ALL\" && row.transaction_type !== filterData.target_type) return;\n  if (filterData.target_method !== \"ALL\" && method.toLowerCase() !== filterData.target_method.toLowerCase()) return;\n\n  // Inisialisasi struktur grup jika belum ada\n  if (!groupedData[method]) {\n    groupedData[method] = {\n      income: 0,\n      expense: 0,\n      items: []\n    };\n  }\n\n  // Akumulasi nominal ringkasan utama & per dompet digital\n  if (row.transaction_type === \"INCOME\") {\n    grandTotalIncome += row.amount;\n    groupedData[method].income += row.amount;\n  }\n  if (row.transaction_type === \"EXPENSE\") {\n    grandTotalExpense += row.amount;\n    groupedData[method].expense += row.amount;\n  }\n\n  // Simpan rincian baris transaksi (menggunakan deskripsi, tanpa kategori)\n  const icon = row.transaction_type === \"INCOME\" ? \"🟢\" : \"🔴\";\n  const desc = row.description ? row.description : \"Tanpa catatan\";\n  groupedData[method].items.push(`${icon} ${row.transaction_date} | Rp${row.amount.toLocaleString('id-ID')} - ${desc}`);\n});\n\n// ==========================================\n// 2. MERANGKAI TEKS OUTPUT AKHIR UNTUK WHATSAPP\n// ==========================================\n\nlet reportText = `📊 *LAPORAN KEUANGAN*\\n🗓️ ${filterData.start_date} s/d ${filterData.end_date}\\n\\n`;\n\nif (Object.keys(groupedData).length === 0) {\n  reportText += \"Tidak ada transaksi yang sesuai dengan kriteria pencarian ini.\";\n} else {\n  // Tampilkan Grand Total Seluruh Aliran Dana\n  if (filterData.target_type === \"ALL\" || filterData.target_type === \"INCOME\") {\n    reportText += `📥 *Total Pemasukan:* Rp${grandTotalIncome.toLocaleString('id-ID')}\\n`;\n  }\n  if (filterData.target_type === \"ALL\" || filterData.target_type === \"EXPENSE\") {\n    reportText += `📤 *Total Pengeluaran:* Rp${grandTotalExpense.toLocaleString('id-ID')}\\n`;\n  }\n  \n  reportText += `\\n➖➖➖➖➖➖➖➖➖➖\\n`;\n\n  // Tampilkan Per Dompet Digital secara Terpisah beserta Sisa Saldonya\n  for (const method in groupedData) {\n    const income = groupedData[method].income;\n    const expense = groupedData[method].expense;\n    \n    // MATEMATIKA SALDO: Pemasukan dikurangi Pengeluaran pada periode tersebut\n    const sisaSaldoPeriode = income - expense; \n\n    reportText += `\\n💳 *${method.toUpperCase()}*\\n`;\n    reportText += `💰 *Sisa Saldo Periode:* Rp${sisaSaldoPeriode.toLocaleString('id-ID')}\\n`;\n    // PERBAIKAN TYPO ADA DI BARIS BAWAH INI\n    reportText += `📈 _(In: Rp${income.toLocaleString('id-ID')} | Out: Rp${expense.toLocaleString('id-ID')})_\\n`;\n    reportText += `📋 *Rincian Acara:* \\n`;\n    \n    // Tampilkan list transaksi di bawah dompet ini\n    groupedData[method].items.forEach(line => {\n      reportText += `${line}\\n`;\n    });\n  }\n}\n\nreturn [{ json: { final_report: reportText } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3280,
+        -1008
+      ],
+      "id": "8dff0eeb-c1cf-46a0-b114-da1117ff6a77",
+      "name": "Code in JavaScript5"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"{{ $json.final_report.replace(/\\n/g, '\\\\n') }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3456,
+        -1008
+      ],
+      "id": "5cbef2f6-b7ca-46a8-8e4a-2acd624a1188",
+      "name": "HTTP Request24",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c3ad709d-e81d-49b6-b2ae-e345f88d3ab3",
+              "leftValue": "={{ $json.body.payload.from }}",
+              "rightValue": "222788627513504@lid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -96,
+        -80
+      ],
+      "id": "74fc73ff-e97c-49ef-a059-8526067df78b",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list"
+        },
+        "start": "={{ $json.start_datetime }}",
+        "end": "={{ $json.end_datetime }}",
+        "useDefaultReminders": false,
+        "additionalFields": {
+          "attendees": [],
+          "color": "8",
+          "description": "={{ $json.description }}",
+          "location": "={{ $json.location }}",
+          "rrule": "={{ $json.recurrence[0].replace('RRULE:', '') }}",
+          "summary": "={{ $json.title }}"
+        },
+        "remindersUi": {
+          "remindersValues": [
+            {
+              "method": "popup",
+              "minutes": 60
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2864,
+        -240
+      ],
+      "id": "1c2e3924-8d3e-4732-a0a9-f2566c32d972",
+      "name": "Create an event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "CREATE_RECURRING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "749da716-a246-45de-af03-c3accc4deec2"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CREATE_RECURRING"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "216ffc86-1b63-4992-a6c0-194bcfb7aa9a",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "RESCHEDULE_EVENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "RESCHEDULE_EVENT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f1372721-7d5c-4b18-a5f6-90ffcb7a0eb4",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "DELETE_EVENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "DELETE_EVENT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "93a4fe3a-d304-4ef6-9c62-ae1af87aed6a",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "EDIT_EVENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EDIT_EVENT"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "830113e6-baf5-43a8-824c-494c36421278",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "CREATE_EVENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "CREATE_EVENT"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2592,
+        -160
+      ],
+      "id": "b0388a4e-d967-4eb5-9083-a551d720740c",
+      "name": "Switch3"
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.choices[0].message.content);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2432,
+        -160
+      ],
+      "id": "4dd8f865-de77-4491-94f8-3a8154f871b0",
+      "name": "Parser JSON7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"🔁 *JADWAL RUTIN BERHASIL DIBUAT*\\n\\nAsisten telah menjadwalkan agenda berulang Anda ke Google Calendar.\\n\\n📌 *Detail Agenda:*\\n• Acara: *{{ $('Parser JSON7').item.json.title }}*\\n• Lokasi/Ruang: {{ $('Parser JSON7').item.json.location || '-' }}\\n• Catatan: {{ $('Parser JSON7').item.json.description || '-' }}\\n\\n🗓️ *Aturan Perulangan (RRULE):*\\n_{{ $('Parser JSON7').item.json.recurrence }}_\\n\\nJadwal pertama akan dimulai sesuai waktu yang ditentukan dan otomatis berulang pada sesi berikutnya.\",\n  \"session\": \"default\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3040,
+        -240
+      ],
+      "id": "a6024964-18d4-469d-9111-4e0130c36df0",
+      "name": "HTTP Request9",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ambil waktu saat ini di Jakarta\nconst now = $now.setZone('Asia/Jakarta');\n\n// 1. Membuat contekan tanggal untuk 7 hari ke depan\nlet cheatSheet = \"REFERENSI TANGGAL 7 HARI KE DEPAN:\\n\";\nfor(let i = 0; i <= 7; i++) {\n  const d = now.plus({days: i});\n  // Contoh output: - Sabtu: 2026-06-27\n  cheatSheet += `- ${d.toFormat('EEEE')}: ${d.toFormat('yyyy-MM-dd')}\\n`;\n}\n\n// 2. Membuat format UNTIL sebulan ke depan untuk RRULE (Harus UTC)\n// Contoh output: 20260723T235959Z\nconst nextMonthRRule = now.plus({months: 1}).toFormat(\"yyyyMMdd'T'235959'Z'\");\n\n// 3. Teruskan data pesan asli beserta contekannya ke AI\nreturn [{\n  json: {\n    ...$input.first().json, // Mempertahankan data dari node sebelumnya\n    calendar_cheat_sheet: cheatSheet,\n    next_month_rrule: nextMonthRRule\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2064,
+        -160
+      ],
+      "id": "09d5516a-70d8-46f2-a0cc-2f4d675d8efc",
+      "name": "Code in JavaScript6"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "limit": 30,
+        "timeMin": "={{ $now.setZone('Asia/Jakarta').startOf('day').toISO() }}",
+        "timeMax": "={{ $json.old_datetime_reference ? DateTime.fromISO($json.old_datetime_reference).setZone('Asia/Jakarta').set({ hour: 23, minute: 59, second: 0, millisecond: 0 }).toISO() : $now.setZone('Asia/Jakarta').plus({ days: 30 }).set({ hour: 23, minute: 59, second: 0, millisecond: 0 }).toISO() }}",
+        "options": {
+          "orderBy": "startTime"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2976,
+        -32
+      ],
+      "id": "5e7a53a7-63d8-4b60-b4de-bdd7b1d8ad20",
+      "name": "Get many events1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawEvents = $input.all();\n\n// Jika kalender kosong dalam 30 hari ke depan\nif (rawEvents.length === 0) {\n  return [{ json: { formatted_calendar: \"Kalender kosong, tidak ada agenda terdaftar.\" } }];\n}\n\nlet textCalendar = \"DAFTAR AGENDA TERDAFTAR DI KALENDER FINAN:\\n\";\n\nrawEvents.forEach((item, index) => {\n  const ev = item.json;\n  \n  // Format waktu mulai agar mudah dibaca manusia dan AI\n  const startStr = ev.start.dateTime \n    ? new Date(ev.start.dateTime).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'short', timeStyle: 'short' })\n    : ev.start.date + \" (All Day)\";\n    \n  // Merangkai teks ringkas untuk satu baris agenda\n  textCalendar += `${index + 1}. [ID: ${ev.id}] | Judul: ${ev.summary} | Waktu: ${startStr} WIB | Lokasi: ${ev.location || \"-\"}\\n`;\n});\n\nreturn [{\n  json: {\n    formatted_calendar: textCalendar\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        -32
+      ],
+      "id": "8aea0272-7069-48c5-9f70-fd4758acc0f8",
+      "name": "Data Pruning"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": {\n    \"type\": \"json_object\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah agen pencocok data (Matchmaker AI) untuk Proactive Life-OS.\\n\\nTUGAS ANDA:\\n1. Baca pesan instruksi perubahan dari user.\\n2. Baca 'DAFTAR AGENDA TERDAFTAR' yang diberikan.\\n3. Temukan ID agenda mana yang dimaksud oleh user secara logis. (Petunjuk: Gunakan kecocokan kata kunci, nama hari, atau jam pada pesan user untuk mengidentifikasi jadwal yang tepat di daftar).\\n4. Jika aksi berupa 'EDIT_EVENT' atau 'RESCHEDULE_EVENT', ekstrak data perubahan TEKS BARU yang diminta user ke bidang 'new_title', 'new_location', atau 'new_description'. Jika user tidak meminta mengubah bidang tersebut, isi string kosong (\\\"\\\").\\n5. ATURAN KETAT: JANGAN PERNAH memasukkan kata-kata perubahan waktu/hari/tanggal ke dalam 'new_title', 'new_location', atau 'new_description'. Perubahan waktu sudah diurus oleh sistem lain. Jika user HANYA meminta pindah jadwal tanpa mengubah judul/lokasi, biarkan ketiga field tersebut KOSONG (\\\"\\\").\\n\\nOutput HARUS JSON murni tanpa narasi tambahan:\\n{\\n \\\"found\\\": true atau false (isi false jika jadwal tidak ditemukan di daftar),\\n \\\"event_id\\\": \\\"(Isi dengan ID dari jadwal yang cocok, kosongkan jika false)\\\",\\n \\\"matched_title\\\": \\\"(Judul asli jadwal yang cocok)\\\",\\n \\\"new_title\\\": \\\"(Isi jika user ingin mengubah judul, jika tidak kosongkan)\\\",\\n \\\"new_location\\\": \\\"(Isi jika user meminta lokasi/ruangan baru, jika tidak kosongkan)\\\",\\n \\\"new_description\\\": \\\"(Isi jika user meminta dosen/catatan baru, jika tidak kosongkan)\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"DAFTAR AGENDA:\\n{{ $json.formatted_calendar.replace(/\\n/g, '\\\\n') }}\\n\\nPESAN USER: {{ $('Edit Fields').item.json.message_content }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3360,
+        -32
+      ],
+      "id": "157db3fb-b915-481f-9696-dbcfdf574521",
+      "name": "Matchmaker AI",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return JSON.parse($input.first().json.choices[0].message.content);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        -32
+      ],
+      "id": "1910fd70-d0d3-428b-801c-da3a48f07186",
+      "name": "Code in JavaScript7"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.found }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "db7d7b58-a2ee-43ba-a929-189fcceadd01"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1d04f172-9389-4128-9a79-bc24338e7117",
+                    "leftValue": "={{ $json.found }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3776,
+        -32
+      ],
+      "id": "b348fa13-39ce-423e-85b6-da69299a2ca3",
+      "name": "Switch4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"Maaf Afin, jadwal yang ingin Anda ubah/hapus tidak ditemukan di kalender 30 hari ke depan.\",\n  \"session\": \"default\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4032,
+        32
+      ],
+      "id": "84fd9387-9639-4e13-85f6-3023c8e0a5b7",
+      "name": "HTTP Request26",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "db2a6fc5-80cc-4243-af46-74fcb1ab706c",
+                    "leftValue": "={{ $('Parser JSON7').item.json.action }}",
+                    "rightValue": "DELETE_EVENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Parser JSON7').item.json.action }}",
+                    "rightValue": "EVENT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "contains"
+                    },
+                    "id": "bfcb6730-31bb-4dfe-82b8-59e46f2e9147"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "update"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3984,
+        -128
+      ],
+      "id": "7cdb78cc-7cdb-4ad2-89f7-38ca6f1cce66",
+      "name": "Switch Aksi Modifikasi"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Ambil data keputusan dari Matchmaker AI\nconst matchmaker = $input.first().json;\n\n// 2. Tarik daftar seluruh agenda mentah dari node Google Calendar sebelumnya\nconst semuaAgenda = $('Get many events1').all();\n\n// 3. Cari objek agenda asli yang cocok dengan event_id dari Matchmaker\nconst agendaAsli = semuaAgenda.find(item => item.json.id === matchmaker.event_id)?.json;\n\nif (!agendaAsli) {\n  throw new Error(\"Gagal menyinkronkan data waktu: Agenda asli tidak ditemukan di array.\");\n}\n\n// 4. Ambil data instruksi waktu dari AI pertama (Parser JSON)\nconst dataAI1 = $('Parser JSON7').first().json;\n\nlet finalStart = agendaAsli.start.dateTime || agendaAsli.start.date;\nlet finalEnd = agendaAsli.end.dateTime || agendaAsli.end.date;\n\n// FUNGSI BANTUAN: Memaksa penambahan Zona Waktu jika AI lupa\nfunction formatTz(dStr) {\n  if (!dStr) return \"\";\n  if (dStr.length === 10) return dStr + \"T00:00:00+07:00\"; // Jika AI hanya membalas \"YYYY-MM-DD\"\n  if (!dStr.includes(\"+\") && !dStr.endsWith(\"Z\")) {\n    return dStr + \"+07:00\"; // Jika AI lupa timezone (Ini yang mencegah bug jam 13:00)\n  }\n  return dStr;\n}\n\n// 5. KONDISI JIKA USER MELAKUKAN RESCHEDULE (UBAH WAKTU)\nif (dataAI1.start_datetime && dataAI1.start_datetime !== \"\") {\n  const oldStartDateStr = agendaAsli.start.dateTime || agendaAsli.start.date;\n  \n  // Lewatkan string waktu ke fungsi pengaman kita\n  let newStartDateStr = formatTz(dataAI1.start_datetime);\n  let newEndDateStr = formatTz(dataAI1.end_datetime);\n  \n  let stringWaktuMulai = newStartDateStr;\n\n  // Cek jika user tidak memberikan jam (Ditandai dengan AI memberikan T00:00:00)\n  if (newStartDateStr.includes(\"T00:00:00\") && oldStartDateStr.includes(\"T\")) {\n    const tanggalBaru = newStartDateStr.split(\"T\")[0]; \n    const jamLama = oldStartDateStr.split(\"T\")[1];     \n    stringWaktuMulai = `${tanggalBaru}T${jamLama}`;    \n  }\n\n  const waktuMulaiBaru = new Date(stringWaktuMulai).getTime();\n  let waktuSelesaiBaru;\n\n  // Cek apakah AI memberikan end_datetime spesifik yang BUKAN jam 00:00\n  if (newEndDateStr && newEndDateStr !== \"\" && !newEndDateStr.includes(\"T00:00:00\")) {\n    waktuSelesaiBaru = new Date(newEndDateStr).getTime();\n  } else {\n    // Gunakan durasi asli jadwal jika tidak ada instruksi jam selesai baru\n    const waktuMulaiAsli = new Date(oldStartDateStr).getTime();\n    const waktuSelesaiAsli = new Date(finalEnd).getTime();\n    const durasiMilidetik = waktuSelesaiAsli - waktuMulaiAsli;\n    \n    waktuSelesaiBaru = waktuMulaiBaru + durasiMilidetik;\n  }\n  \n  function toISOJakarta(ms) {\n    return new Date(ms + 25200000).toISOString().replace('.000Z', '+07:00');\n  }\n  \n  finalStart = toISOJakarta(waktuMulaiBaru);\n  finalEnd = toISOJakarta(waktuSelesaiBaru);\n}\n\n// 6. GABUNGKAN DATA UNTUK PAYLOAD UPDATE\nreturn [{\n  json: {\n    event_id: matchmaker.event_id,\n    summary: matchmaker.new_title && matchmaker.new_title !== \"\" ? matchmaker.new_title : agendaAsli.summary,\n    new_start: finalStart,\n    new_end: finalEnd,\n    location: matchmaker.new_location && matchmaker.new_location !== \"\" ? matchmaker.new_location : (agendaAsli.location || \"\"),\n    description: matchmaker.new_description && matchmaker.new_description !== \"\" ? matchmaker.new_description : (agendaAsli.description || \"\")\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4192,
+        -224
+      ],
+      "id": "e9622c61-8764-4e35-b863-ed3ac48758c1",
+      "name": "Code in JavaScript8"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "eventId": "={{ $json.event_id }}",
+        "updateFields": {
+          "description": "={{ $json.description }}",
+          "end": "={{ $json.new_end }}",
+          "location": "={{ $json.location }}",
+          "start": "={{ $json.new_start }}",
+          "summary": "={{ $json.summary }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        4336,
+        -224
+      ],
+      "id": "c2ca7ea3-f563-4dbb-87d2-9e4b73f872f1",
+      "name": "Update an event1",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "eventId": "={{ $json.event_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        4352,
+        -32
+      ],
+      "id": "e4d86e28-79b1-4708-b46f-db6f67d68f87",
+      "name": "Delete an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": {{ JSON.stringify(JSON.parse($json.choices[0].message.content).whatsapp_message) }},\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4864,
+        -224
+      ],
+      "id": "d2a78fd1-5b51-4403-ab37-b48652eb8854",
+      "name": "HTTP Request27",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').item.json.sender_number }}\",\n  \"text\": \"🗑️ *JALUR MODIFIKASI: AGENDA DIHAPUS*\\n\\nAgenda *{{ $('Code in JavaScript7').item.json.matched_title }}* telah berhasil dibatalkan dan dihapus secara permanen dari Google Calendar Anda.\"\n  ,\n  \"session\": \"default\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4496,
+        -32
+      ],
+      "id": "e1cf7a84-76ca-4ae6-94a1-9d73c81fe536",
+      "name": "HTTP Request28",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Ambil data dari node Update Google Calendar sebelumnya\nconst event = $input.first().json;\n\n// 2. Ekstrak waktu mentah\nconst startTimeStr = event.start?.dateTime || event.start?.date || \"\";\nconst endTimeStr = event.end?.dateTime || event.end?.date || \"\";\n\n// 3. Fungsi cerdas untuk menggabungkan waktu agar tidak kaku\nfunction formatWaktu(start, end) {\n  if (!start) return \"-\";\n\n  const tglOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' };\n  const jamOptions = { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' };\n\n  // Jika all-day event (hanya tanggal YYYY-MM-DD tanpa jam)\n  if (start.length === 10) {\n    const dStart = new Date(start);\n    const tglStartStr = dStart.toLocaleDateString('id-ID', tglOptions);\n    return `${tglStartStr} (Seharian)`;\n  }\n\n  // Jika acara memiliki jam spesifik\n  const dStart = new Date(start);\n  const dEnd = end ? new Date(end) : dStart;\n\n  const tglStartStr = dStart.toLocaleDateString('id-ID', tglOptions);\n  const tglEndStr = dEnd.toLocaleDateString('id-ID', tglOptions);\n  \n  const jamStartStr = dStart.toLocaleTimeString('id-ID', jamOptions).replace(/\\./g, ':');\n  const jamEndStr = dEnd.toLocaleTimeString('id-ID', jamOptions).replace(/\\./g, ':');\n\n  // LOGIKA PENGGABUNGAN:\n  // Jika harinya sama, gabungkan jamnya saja (Contoh: Kamis, 25 Juni 2026, 05:00 - 08:00 WIB)\n  if (tglStartStr === tglEndStr) {\n    return `${tglStartStr}, ${jamStartStr} - ${jamEndStr} WIB`;\n  } else {\n  // Jika harinya beda, tampilkan keduanya\n    return `${tglStartStr} ${jamStartStr} WIB - ${tglEndStr} ${jamEndStr} WIB`;\n  }\n}\n\n// 4. Ekstrak data yang dibutuhkan\nconst summary = event.summary || \"Agenda Tanpa Judul\";\nconst waktuGabungan = formatWaktu(startTimeStr, endTimeStr);\nconst location = event.location || \"-\";\nconst description = event.description || \"-\";\n\n// 5. Return data bersih untuk AI\nreturn [{\n  json: {\n    judul_agenda: summary,\n    waktu_pelaksanaan: waktuGabungan,\n    lokasi: location,\n    catatan: description\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4496,
+        -224
+      ],
+      "id": "390e048e-5876-4eb7-a1b7-a7209002f703",
+      "name": "Code in JavaScript9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": {\n    \"type\": \"json_object\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah asisten virtual proaktif dan ramah (Proactive Life-OS). Tugas Anda adalah membuat pesan konfirmasi ringkas untuk WhatsApp bahwa jadwal pengguna telah BERHASIL DIPINDAHKAN / DIPERBARUI.\\n\\nGunakan gaya bahasa yang santai, asyik, tidak kaku, dan gunakan emoji secukupnya.\\n\\nATURAN PESAN:\\n1. Awali dengan konfirmasi ceria (1 baris saja).\\n2. Tampilkan detail jadwal baru secara rapi dan simpel. Jangan gunakan karakter '*' berlebihan untuk membuat efek bold gunakan 1 diawal dan diakhir (misal : *{{ $json.judul_agenda }}* ). tampilkan judul agendanya sebagai header detail Jika Lokasi atau Catatan berisi tanda \\\"-\\\", hilangkan saja baris tersebut dari daftar.\\n3. Berikan kalimat penutup suportif sesuai dengan agenda dan catatan(1 kalimat saja) berdasarkan \\\"Catatan\\\" atau \\\"Judul\\\" jadwal.\\n4. OUTPUT WAJIB JSON MURNI:\\n{\\n  \\\"whatsapp_message\\\": \\\"(Isi pesan WhatsApp di sini, gunakan \\\\n untuk baris baru)\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"DATA JADWAL BARU:\\nJudul: {{ $json.judul_agenda }}\\nWaktu: {{ $json.waktu_pelaksanaan }}\\nLokasi: {{ $json.lokasi }}\\nCatatan: {{ $json.catatan }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4672,
+        -224
+      ],
+      "id": "ff22b854-280a-43d5-ad81-a8c2c424269a",
+      "name": "Matchmaker AI1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list"
+        },
+        "start": "={{ $json.start_datetime }}",
+        "end": "={{ $json.end_datetime }}",
+        "useDefaultReminders": false,
+        "additionalFields": {
+          "attendees": [],
+          "color": "11",
+          "description": "={{ $json.description }}",
+          "location": "={{ $json.location }}",
+          "summary": "={{ $json.title }}"
+        },
+        "remindersUi": {
+          "remindersValues": [
+            {
+              "method": "popup",
+              "minutes": 60
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2864,
+        160
+      ],
+      "id": "69c4b6ee-2fe8-417b-be29-d3df7cf14a97",
+      "name": "Create an event2",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('Edit Fields').first().json.sender_number }}\",\n  \"text\": \"✅ *JADWAL BARU DITAMBAHKAN*\\n\\nAgenda sekali jalan telah berhasil disinkronkan ke Google Calendar Anda.\\n\\n📌 *Detail Agenda:*\\n• Acara: *{{ $('Parser JSON7').first().json.title }}*\\n• Waktu: {{ new Date($('Parser JSON7').first().json.start_datetime).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', dateStyle: 'long', timeStyle: 'short' }) }} WIB\\n• Lokasi: {{ $('Parser JSON7').first().json.location || '-' }}\\n• Catatan: {{ $('Parser JSON7').first().json.description || '-' }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3008,
+        160
+      ],
+      "id": "00f49282-a293-4cd1-a03b-28eb6a390cb2",
+      "name": "HTTP Request29",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "system_memory",
+        "limit": 1,
+        "orderBy": "created_at.desc",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "AWAITING_NEW_HABIT"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -96
+      ],
+      "id": "30ed601c-06b2-47d3-a74a-087b4f5512f9",
+      "name": "Get many rows",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9bbfaa34-3a2d-44c1-8f32-0f8505009cfc",
+                    "leftValue": "={{ $json.is_locked }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cb442408-c039-4cb5-978d-2bf5d2cc74a4",
+                    "leftValue": "={{ $json.is_locked }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.content }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    },
+                    "id": "093973f1-5a3c-4c08-9550-38684f665bca"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1152c035-a164-4c83-ab46-1507be28119c",
+                    "leftValue": "={{ $json.content }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "empty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        -128
+      ],
+      "id": "e3764ab6-5bbf-4d1b-81b7-d03e8451d78d",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// 1. Jika database kosong (tidak ada status AWAITING sama sekali)\nif (items.length === 0 || !items[0].json.id) {\n    return [{ json: { is_locked: false, reason: \"Tidak ada kunci\" } }];\n}\n\nconst memoryRow = items[0].json;\nlet expiresAt = null;\n\n// Perbaikan: Deteksi jika metadata berbentuk string JSON (text dari database)\nif (memoryRow.metadata) {\n    if (typeof memoryRow.metadata === 'string') {\n        try {\n            const parsedMetadata = JSON.parse(memoryRow.metadata);\n            expiresAt = parsedMetadata.expires_at;\n        } catch (e) {\n            expiresAt = null; // Gagal parse JSON\n        }\n    } else {\n        expiresAt = memoryRow.metadata.expires_at;\n    }\n}\n\nconst now = new Date();\n\n// 2. Jika kunci ditemukan, mari kita cek jamnya!\nif (expiresAt && new Date(expiresAt) > now) {\n    // Waktu sekarang masih SEBELUM waktu kedaluwarsa -> MASIH VALID\n    return [{\n        json: {\n            content: memoryRow.content,\n            is_locked: true,\n            memory_id: memoryRow.id,\n            expires_at: expiresAt\n        }\n    }];\n} else {\n    // Waktu sekarang sudah LEWAT dari kedaluwarsa -> EXPIRED\n    return [{\n        json: {\n            data: expiresAt, // Sekarang nilai ini akan muncul (tidak undefined lagi)\n            content: memoryRow.content,\n            is_locked: false,\n            reason: \"Kunci sudah kedaluwarsa (Expired)\",\n            expired_memory_id: memoryRow.id \n        }\n    }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -96
+      ],
+      "id": "120fcb20-5051-42b9-9cb6-6271763eee5f",
+      "name": "Code in JavaScript",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0989b0d0-d3b8-4be4-a0e1-7bdf1af58504",
+              "leftValue": "={{ $json.message_content.toLowerCase() }}",
+              "rightValue": "deadline",
+              "operator": {
+                "type": "string",
+                "operation": "startsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1024,
+        -112
+      ],
+      "id": "cb881f2d-8533-4199-b6ce-2eb8a0cb10f9",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "gXVNiC3RoQtYdita",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/gXVNiC3RoQtYdita",
+          "cachedResultName": "Deadlines"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "pesan": "={{ $json.message_content }}",
+            "nomor": "={{ $json.sender_number }}"
+          },
+          "matchingColumns": [
+            ""
+          ],
+          "schema": [
+            {
+              "id": "pesan",
+              "displayName": "pesan",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "nomor",
+              "displayName": "nomor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        -304
+      ],
+      "id": "e9b38e4e-8bd7-48ba-bbcb-f96c4b218e33",
+      "name": "Deadlines"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "waha-inbound": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Parser JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser JSON": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        []
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Parser JSON7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request11": {
+      "main": [
+        [
+          {
+            "node": "Parser JSON5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser JSON5": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request14",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request16",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request19",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request22",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request12": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request14": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request15",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request16": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request17",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request17": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request18",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request19": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request20",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request20": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request21",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request22": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request23",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request23": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript5": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request24",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch3": {
+      "main": [
+        [
+          {
+            "node": "Create an event1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many events1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many events1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many events1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create an event2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parser JSON7": {
+      "main": [
+        [
+          {
+            "node": "Switch3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript6": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events1": {
+      "main": [
+        [
+          {
+            "node": "Data Pruning",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Pruning": {
+      "main": [
+        [
+          {
+            "node": "Matchmaker AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matchmaker AI": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript7",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript7": {
+      "main": [
+        [
+          {
+            "node": "Switch4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch4": {
+      "main": [
+        [
+          {
+            "node": "Switch Aksi Modifikasi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request26",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request26": {
+      "main": [
+        []
+      ]
+    },
+    "Switch Aksi Modifikasi": {
+      "main": [
+        [
+          {
+            "node": "Delete an event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript8",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript8": {
+      "main": [
+        [
+          {
+            "node": "Update an event1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete an event": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request28",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript9",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript9": {
+      "main": [
+        [
+          {
+            "node": "Matchmaker AI1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Matchmaker AI1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request27",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request29",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Deadlines",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deadlines": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Jakarta",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 10,
+    "saveDataErrorExecution": "all"
+  },
+  "versionId": "c28582f1-be10-44ea-91e0-58e85fc17a88",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb4ec7fed4887f4cc81d7810d7b72ed88c4ac7714b865ebd1438277ded8f8e8b"
+  },
+  "nodeGroups": [],
+  "id": "4r2DBCBZJcv8dFpU",
+  "tags": []
+}

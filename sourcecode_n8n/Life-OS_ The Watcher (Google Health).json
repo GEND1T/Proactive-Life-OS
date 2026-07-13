@@ -1,0 +1,288 @@
+{
+  "name": "Life-OS: The Watcher (Google Health)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "eec30f66-bae5-411e-8202-e616c82fc735",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints:dailyRollUp",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"range\": {\n    \"start\": {\n      \"date\": {\n        \"year\": {{ $now.setZone('Asia/Jakarta').year }},\n        \"month\": {{ $now.setZone('Asia/Jakarta').month }},\n        \"day\": {{ $now.setZone('Asia/Jakarta').day }}\n      },\n      \"time\": {\n        \"hours\": 0,\n        \"minutes\": 0,\n        \"seconds\": 0\n      }\n    },\n    \"end\": {\n      \"date\": {\n        \"year\": {{ $now.setZone('Asia/Jakarta').plus({days: 1}).year }},\n        \"month\": {{ $now.setZone('Asia/Jakarta').plus({days: 1}).month }},\n        \"day\": {{ $now.setZone('Asia/Jakarta').plus({days: 1}).day }}\n      },\n      \"time\": {\n        \"hours\": 0,\n        \"minutes\": 0,\n        \"seconds\": 0\n      }\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        176,
+        0
+      ],
+      "id": "2f280e16-6b82-42dc-84ac-f691c0b8bfab",
+      "name": "HTTP Request",
+      "credentials": {
+        "googleOAuth2Api": {
+          "id": "049XxkXrZD7vNRnk",
+          "name": "AI Project"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nlet totalSteps = 0;\n\n// Mengecek apakah Google Health mengembalikan data agregasi langkah\nif (response.rollupDataPoints && response.rollupDataPoints.length > 0) {\n  const stepsData = response.rollupDataPoints[0].steps;\n  \n  // Mengambil angka akumulasi (countSum)\n  if (stepsData && stepsData.countSum) {\n    totalSteps = stepsData.countSum;\n  }\n}\n\nreturn [{\n  json: {\n    logged_date: $now.setZone('Asia/Jakarta').toISODate(),\n    steps_count: totalSteps,\n    wakatime_coding_hours: 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ],
+      "id": "852acf1e-1b62-419c-b9d0-231fb789be66",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://efhpqxhpdcvkjrvzopmf.supabase.co/rest/v1/activity_logs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "f914ba5e-24f5-4f0b-9b4e-35b2df89d33a",
+      "name": "HTTP Request1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mengambil data dari node sebelumnya\nconst healthData = $('Code in JavaScript').item.json; \nconst calendarEvents = $input.all(); \n\nlet sleepSessions = [];\n\n// VARIABEL METRIK HARIAN\nlet codingHours = 0;\nlet projectFocusHours = 0;\nlet campusActivityHours = 0;\nlet workoutMinutes = 0;\nlet holidayHours = 0;\nlet freeTimeHours = 0;\n\n// 1. HITUNG TOTAL KODING & AKTIVITAS BARU HARIAN\ncalendarEvents.forEach(item => {\n    const ev = item.json;\n    if (!ev.start || !ev.end || !ev.summary) return;\n    const summary = ev.summary.toLowerCase();\n    \n    // Kalkulasi durasi acara\n    const start = new Date(ev.start.dateTime || ev.start.date).getTime();\n    const end = new Date(ev.end.dateTime || ev.end.date).getTime();\n    const durationHours = (end - start) / (1000 * 60 * 60);\n    const durationMinutes = (end - start) / (1000 * 60);\n\n    // a. Waktu Koding Umum\n    if (summary.includes('koding') || summary.includes('coding') || summary.includes('ngoding')) {\n        codingHours += durationHours;\n    }\n    \n    // b. Project Focus (Termasuk nama proyek spesifik Anda)\n    if (summary.includes('project') || summary.includes('proyek') || summary.includes('ruang pengajar') || summary.includes('monoestarifish') || summary.includes('server') || summary.includes('smartcard')) {\n        projectFocusHours += durationHours;\n    }\n\n    // c. Campus Activity (Termasuk kepanitiaan)\n    if (summary.includes('kuliah') || summary.includes('kelas') || summary.includes('kampus') || summary.includes('kelompok') || summary.includes('rapat')) {\n        campusActivityHours += durationHours;\n    }\n\n    // d. Workout / Olahraga\n    if (summary.includes('olahraga') || summary.includes('workout') || summary.includes('lari') || summary.includes('gym')) {\n        workoutMinutes += durationMinutes;\n    }\n\n    // e. Liburan\n    if (summary.includes('liburan') || summary.includes('holiday') || summary.includes('piknik') || summary.includes('healing')) {\n        holidayHours += durationHours;\n    }\n\n    // f. Free Time / Waktu Santai\n    if (summary.includes('santai') || summary.includes('free time') || summary.includes('waktu luang') || summary.includes('me time')) {\n        freeTimeHours += durationHours;\n    }\n});\n\n// 2. BEDAH SESI TIDUR & EKSTRAKSI SLEEP AS ANDROID\ncalendarEvents.forEach(item => {\n    const ev = item.json;\n    if (!ev.start || !ev.end || !ev.summary) return;\n    const summary = ev.summary.toLowerCase();\n\n    // Disederhanakan agar kata 'istirahat' bisa Anda gunakan untuk free time jika mau\n    if (summary.includes('tidur') || summary.includes('sleep')) { \n        const startStr = ev.start.dateTime || ev.start.date;\n        const endStr = ev.end.dateTime || ev.end.date;\n        const durationMinutes = Math.round((new Date(endStr).getTime() - new Date(startStr).getTime()) / (1000 * 60));\n        \n        const rawDesc = ev.description || \"\";\n        const cleanDesc = rawDesc.replace(/<[^>]*>?/gm, ''); \n\n        let deepSleepMinutes = null;\n        let sleepType = durationMinutes > 120 ? 'Tidur Utama' : 'Tidur Siang / Ekstra';\n\n        const deepSleepMatch = cleanDesc.match(/Tidur nyenyak:\\s*(\\d+)%/i) || cleanDesc.match(/Deep sleep:\\s*(\\d+)%/i);\n        \n        if (deepSleepMatch) {\n            const percentage = parseInt(deepSleepMatch[1]);\n            deepSleepMinutes = Math.round((percentage / 100) * durationMinutes);\n            sleepType = 'Tidur Utama'; \n        } else if (cleanDesc.includes('Sleep as Android')) {\n            sleepType = 'Tidur Utama';\n        }\n\n        sleepSessions.push({\n            session_start: startStr,\n            session_end: endStr,\n            sleep_duration_minutes: durationMinutes,\n            sleep_type: sleepType,\n            deep_sleep_minutes: deepSleepMinutes\n        });\n    }\n});\n\n// 3. RAKIT PAYLOAD UNTUK DATABASE\nlet results = [];\nlet aggregatesAssigned = false;\n\n// Skenario A: Jika tidak ada data tidur sama sekali hari ini \nif (sleepSessions.length === 0) {\n    results.push({\n        json: {\n            logged_date: healthData.logged_date,\n            session_start: new Date(healthData.logged_date).toISOString(),\n            steps_count: healthData.steps_count,\n            wakatime_coding_hours: parseFloat(codingHours.toFixed(2)),\n            project_focus_hours: parseFloat(projectFocusHours.toFixed(2)),\n            campus_activity_hours: parseFloat(campusActivityHours.toFixed(2)),\n            workout_minutes: Math.round(workoutMinutes),\n            holiday_hours: parseFloat(holidayHours.toFixed(2)),\n            free_time_hours: parseFloat(freeTimeHours.toFixed(2)),\n            sleep_type: 'Tanpa Data Tidur'\n        }\n    });\n} \n// Skenario B: Memasukkan sesi tidur (Utama dan Ekstra)\nelse {\n    sleepSessions.forEach(session => {\n        let payload = {\n            logged_date: healthData.logged_date,\n            session_start: session.session_start,\n            session_end: session.session_end,\n            sleep_duration_minutes: session.sleep_duration_minutes,\n            sleep_type: session.sleep_type,\n            deep_sleep_minutes: session.deep_sleep_minutes\n        };\n\n        // Tempelkan metrik harian HANYA ke satu baris (Tidur Utama) agar tidak duplikat di DB\n        if (!aggregatesAssigned && session.sleep_type === 'Tidur Utama') {\n            payload.steps_count = healthData.steps_count;\n            payload.wakatime_coding_hours = parseFloat(codingHours.toFixed(2));\n            payload.project_focus_hours = parseFloat(projectFocusHours.toFixed(2));\n            payload.campus_activity_hours = parseFloat(campusActivityHours.toFixed(2));\n            payload.workout_minutes = Math.round(workoutMinutes);\n            payload.holiday_hours = parseFloat(holidayHours.toFixed(2));\n            payload.free_time_hours = parseFloat(freeTimeHours.toFixed(2));\n            aggregatesAssigned = true;\n        }\n\n        results.push({ json: payload });\n    });\n\n    // Jika kebetulan hari itu hanya ada Tidur Ekstra tanpa Utama\n    if (!aggregatesAssigned && results.length > 0) {\n        results[0].json.steps_count = healthData.steps_count;\n        results[0].json.wakatime_coding_hours = parseFloat(codingHours.toFixed(2));\n        results[0].json.project_focus_hours = parseFloat(projectFocusHours.toFixed(2));\n        results[0].json.campus_activity_hours = parseFloat(campusActivityHours.toFixed(2));\n        results[0].json.workout_minutes = Math.round(workoutMinutes);\n        results[0].json.holiday_hours = parseFloat(holidayHours.toFixed(2));\n        results[0].json.free_time_hours = parseFloat(freeTimeHours.toFixed(2));\n    }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "363e77d5-04a1-4583-9221-c7b614c07af2",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "id"
+        },
+        "timeMin": "={{ $now.setZone('Asia/Jakarta').startOf('day').toISO() }}",
+        "timeMax": "={{ $now.setZone('Asia/Jakarta').endOf('day').toISO() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        -112
+      ],
+      "id": "96dd6018-9e3b-4106-b4f3-c9e702d65614",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "8ccc23310be9685a14144173f8097cd25c091ad36766eca87b9d06db82c38018@group.calendar.google.com",
+          "mode": "list",
+          "cachedResultName": "Sleep as Android"
+        },
+        "timeMin": "={{ $now.setZone('Asia/Jakarta').startOf('day').toISO() }}",
+        "timeMax": "={{ $now.setZone('Asia/Jakarta').endOf('day').toISO() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        624,
+        96
+      ],
+      "id": "c1f135ce-a351-418b-99a6-e4f9f0ac3861",
+      "name": "Get many events1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "26c90946-cb7e-41ab-a775-54f6d474f5fb",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get many events1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "dynamic",
+    "timezone": "Asia/Jakarta",
+    "saveDataErrorExecution": "all",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveDataSuccessExecution": "all"
+  },
+  "versionId": "8d5d37ad-76c1-430f-99bc-496f63996000",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb4ec7fed4887f4cc81d7810d7b72ed88c4ac7714b865ebd1438277ded8f8e8b"
+  },
+  "nodeGroups": [],
+  "id": "vtPSpVBukJRO6z4z",
+  "tags": []
+}

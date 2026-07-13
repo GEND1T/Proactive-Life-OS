@@ -1,0 +1,314 @@
+{
+  "name": "Deadlines",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "pesan"
+            },
+            {
+              "name": "nomor"
+            }
+          ]
+        }
+      },
+      "id": "c055762a-8fe7-4141-a639-df2372f30060",
+      "typeVersion": 1.1,
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        272,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Ambil data pertama dari input n8n\nconst inputData = $input.first().json;\n\n// Jalur yang benar: choices[0].message.content\nconst jsonString = inputData.choices[0].message.content;\n\n// Lakukan parse string tersebut menjadi JSON objek\nreturn [{ json: JSON.parse(jsonString) }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        352
+      ],
+      "id": "6efe00e6-130c-4a8d-a286-91315c9317dd",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah asisten AI khusus ekstraksi data untuk sistem Life-OS milik Afin. \\n\\nFAKTA WAKTU SAAT INI:\\nHari ini adalah {{ $now.setZone('Asia/Jakarta').toFormat('EEEE, d MMMM yyyy') }}.\\n\\nTUGAS UTAMA:\\nEkstrak pesan dari Afin mengenai deadline tugas, lalu ubah ke dalam format objek JSON yang terstruktur.\\n\\nSKEMA JSON YANG DIWAJIBKAN:\\n{\\n  \\\"task_name\\\": \\\"(String) Nama tugas yang diekstrak, hilangkan kata 'Deadline:'\\\",\\n  \\\"due_date\\\": \\\"(String) Tanggal batas waktu dalam format YYYY-MM-DD\\\",\\n  \\\"priority\\\": \\\"(String) HIGH / MEDIUM / LOW\\\"\\n}\\n\\nATURAN KETAT:\\n1. Kalkulasi `due_date` dengan akurat berdasarkan FAKTA WAKTU SAAT INI. Jika Afin mengatakan 'besok', tambahkan 1 hari. Jika 'lusa', tambahkan 2 hari. Jika menyebut nama hari (misal 'Jumat depan'), hitung tanggal persisnya.\\n2. Jika tingkat prioritas tidak disebutkan secara eksplisit oleh Afin di dalam teks, Anda WAJIB mengisinya dengan \\\"HIGH\\\".\\n3. Format waktu harus murni YYYY-MM-DD tanpa jam.\\n4. Output HANYA boleh berupa JSON valid tanpa teks pembuka atau penutup apa pun.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $json.pesan }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        528,
+        352
+      ],
+      "id": "24095551-b0fc-4e32-817a-4bd8d563b559",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "start": "={{ $json.due_date }}",
+        "end": "={{ $json.due_date }}",
+        "additionalFields": {
+          "allday": "yes",
+          "color": "5",
+          "summary": "=🚨 DEADLINE: {{ $json.task_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        352
+      ],
+      "id": "92cc2b37-0ec9-4471-acaf-0b4c716ddbef",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "deadlines",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "task_name",
+              "fieldValue": "={{ $('Code in JavaScript').item.json.task_name }}"
+            },
+            {
+              "fieldId": "due_date",
+              "fieldValue": "={{ $('Code in JavaScript').item.json.due_date }}"
+            },
+            {
+              "fieldId": "priority",
+              "fieldValue": "={{ $('Code in JavaScript').item.json.due_date }}"
+            },
+            {
+              "fieldId": "calendar_event_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        352
+      ],
+      "id": "3c75b39b-7b27-46f0-9cda-6146a3f067b8",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1376,
+        352
+      ],
+      "id": "950f58a3-944f-422f-96bb-050ea8a7c347",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"{{ $('When Executed by Another Workflow').item.json.nomor }}\",\n  \"text\": \"✅ *Transaksi Berhasil Dicatat*\\n\\nJenis: *{{ $json.transaction_type }}*\\nNominal: Rp{{ $json.amount.toLocaleString('id-ID') }}\\nSumber: {{ $json.payment_method }}\\nKategori: {{ $json.category }}\\nCatatan: {{ $json.description }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        352
+      ],
+      "id": "9f695f46-1400-481a-9199-41317429ff69",
+      "name": "HTTP Request13",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "When Executed by Another Workflow": [
+      {
+        "json": {
+          "pesan": "Deadline UAS data Maining 13 juli",
+          "nomor": "222788627513504@lid"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request13",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "eb1df34c-a1dc-4748-8da4-40c09e19a2b2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb4ec7fed4887f4cc81d7810d7b72ed88c4ac7714b865ebd1438277ded8f8e8b"
+  },
+  "nodeGroups": [],
+  "id": "gXVNiC3RoQtYdita",
+  "tags": []
+}

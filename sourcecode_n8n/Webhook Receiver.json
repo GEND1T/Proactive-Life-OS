@@ -1,0 +1,2325 @@
+{
+  "name": "Webhook Receiver",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "waha-poll-receiver",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "ad59ec34-7412-4f4e-9778-2112a73115c2",
+      "name": "Webhook",
+      "webhookId": "e8861b50-6801-43d8-af2e-acbea637c33d"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.vote_result }}",
+                    "rightValue": "Lainnya...",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "f79fd422-73ab-4463-a3d7-75d855fe83c5"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4434f9d3-2267-499d-8d02-61d6d193ff43",
+                    "leftValue": "={{ $json.vote_result }}",
+                    "rightValue": "Selesai",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "71144953-d9e4-46c0-8c3f-156954e8fff3",
+                    "leftValue": "={{ $json.vote_result }}",
+                    "rightValue": "Lanjut aktivitas lainnya",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "162b8050-89a5-4152-a320-b3a6d1c13fd1",
+                    "leftValue": "={{ $json.vote_result }}",
+                    "rightValue": "Lainnya...",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        -32
+      ],
+      "id": "55957397-260e-4134-8e16-981358e7d2b6",
+      "name": "Switch",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "tableId": "system_memory",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "AWAITING_NEW_HABIT"
+            },
+            {
+              "fieldId": "metadata",
+              "fieldValue": "={{ JSON.stringify({ expires_at: $now.plus({minutes: 10}).toISO() }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -544
+      ],
+      "id": "1a0b4708-d44b-43ce-b49f-56bfc4826f9e",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "activity_name",
+              "condition": "eq",
+              "keyValue": "={{ $('Code Node').first().json.vote_result }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        624,
+        96
+      ],
+      "id": "8a49d753-5f0f-41e5-b8a0-749ad450d035",
+      "name": "Get many rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const habit = $input.first().json;\nif (!habit) return [];\n\n// Tambah 2 poin (Reward)\nconst newPoints = habit.points + 2;\n\n// Cek apakah mencapai threshold 10 untuk berevolusi jadi rutinitas mutlak\nconst newStatus = newPoints >= 10 ? 'ROUTINE' : 'SUGGESTION';\n\nreturn [{\n    json: {\n        id: habit.id,\n        activity_name: habit.activity_name,\n        points: newPoints,\n        status: newStatus,\n        is_evolved: newPoints >= 10 && habit.status !== 'ROUTINE'\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "8ebb2dd1-f2ad-4518-b01d-ef6fa768519c",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n\"text\": \"Wah, aktivitas baru nih. Lagi sibuk ngerjain apa sekarang? Balas pesan ini ya biar aku catat jadi kebiasaan barumu! (Waktu 10 menit)\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        816,
+        -544
+      ],
+      "id": "ed8b895a-764f-4398-b8ae-222ea51c1e3a",
+      "name": "HTTP Request11",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Asumsi payload standar WAHA untuk poll vote\nconst body = $input.first().json.body || $input.first().json;\nlet selectedOption = \"\";\n\n// Silakan sesuaikan path 'selectedOptionName' dengan struktur asli JSON Webhook WAHA Anda\n// Umumnya berada di nama opsi yang di-vote\nif (body?.payload?.vote?.selectedOptions && body.payload.vote.selectedOptions.length > 0) {\n    selectedOption = body.payload.vote.selectedOptions[0]; \n} else {\n    // Fallback manual (ganti dengan path JSON yang tepat dari WAHA Anda)\n    selectedOption = body.message || body.text || \"Lainnya...\"; \n}\n\nreturn [{\n    json: {\n        vote_result: selectedOption\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "5692ece8-102e-46cb-b7e2-455ac1304094",
+      "name": "Code Node"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "habit_tracker",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "points",
+              "fieldValue": "={{ $json.points }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1248,
+        96
+      ],
+      "id": "7a982c9c-2d88-400d-a935-266214c197f7",
+      "name": "Update a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n   \"text\": {{ JSON.stringify($json.choices[0].message.content.trim().replace(/^\"|\"$/g, '')) }},\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1664,
+        96
+      ],
+      "id": "3ee12739-85c6-4234-a8ce-8fcfda8f0b9b",
+      "name": "HTTP Request",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "respon-lainnya",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        320
+      ],
+      "id": "28f9de8a-ac61-4bc9-b035-6c627dbb26c1",
+      "name": "waha-inbound",
+      "webhookId": "b7852a0c-7b6e-4288-9c95-dc9b0ea4e865"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b99f03ae-e3a6-4292-b4a6-8d4a18fe0715",
+              "leftValue": "={{ $json.body.payload.fromMe }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "80707590-db10-44c7-a6f3-4a32fbc28dc8",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        208,
+        320
+      ],
+      "id": "39a5dbf8-ba85-4a5c-9234-fdafad983409",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c3ad709d-e81d-49b6-b2ae-e345f88d3ab3",
+              "leftValue": "={{ $json.body.payload.from }}",
+              "rightValue": "222788627513504@lid",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        304
+      ],
+      "id": "e3396ee0-2cc2-4dbf-ab7e-73097f16bd04",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.is_locked }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "093973f1-5a3c-4c08-9550-38684f665bca"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1152c035-a164-4c83-ab46-1507be28119c",
+                    "leftValue": "={{ $json.is_locked }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        288
+      ],
+      "id": "60a67bb9-dab0-4479-9008-4d20423e97da",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "system_memory",
+        "limit": 1,
+        "orderBy": "created_at.desc",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "AWAITING_NEW_HABIT"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        640,
+        288
+      ],
+      "id": "e4963ada-6049-4d5b-8e1f-d3f7ac64648f",
+      "name": "Get many rows1",
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        272
+      ],
+      "id": "61a2fbec-2dfd-48cb-a398-3dd391dcf7ae",
+      "name": "Get many rows2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const habits = $input.all().map(item => ({ id: item.json.id, name: item.json.activity_name }));\nconst userMessage = $('waha-inbound').first().json.body.payload.body || $('waha-inbound').first().json.body.payload.body; \n\nreturn [{\n    json: {\n        user_text: userMessage,\n        existing_habits: JSON.stringify(habits)\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        272
+      ],
+      "id": "2e2f0296-9874-4084-b722-41d75682ca31",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.1,\n  \"response_format\": {\n    \"type\": \"json_object\"\n  },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": {{ JSON.stringify(\"Anda adalah AI Deduplikasi Data. Tugas Anda HANYA mencocokkan input teks dengan daftar aktivitas yang ada.\\n\\nDAFTAR AKTIVITAS DATABASE:\\n\" + JSON.stringify($json.existing_habits) + \"\\n\\nTEKS INPUT: \" + $json.user_text + \"\\n\\nINSTRUKSI:\\n1. Analisis teks input. Apakah maknanya sama/identik dengan salah satu aktivitas di database? (Contoh: \\\"ngoding web\\\" = \\\"Koding Web\\\").\\n2. Outputkan WAJIB dalam format JSON mentah tanpa markdown.\\n3. Format JSON:\\n{\\\"is_match\\\": true/false,\\\"matched_id\\\":\\\"UUID_jika_match_atau_null\\\",\\\"new_habit_name\\\": \\\"Nama Aktivitas Baru Dirapikan (Kapitalisasi yang Baik) jika is_match false\\\"}\") }}\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Lakukan deduplikasi sekarang\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2000,
+        272
+      ],
+      "id": "a298426f-4f53-4e97-a0c1-4ce4a317fa3e",
+      "name": "HTTP Request22",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ Boolean(JSON.parse($json.choices[0].message.content).is_match) }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "661c3d7b-fcb6-423c-a2bb-3e93caf34308"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "be832729-ce15-49a9-8f11-7a4e0c805626",
+                    "leftValue": "={{ Boolean(JSON.parse($json.choices[0].message.content).is_match) }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2272,
+        288
+      ],
+      "id": "d5d60fb5-cd88-4122-a51b-318d774cdfa1",
+      "name": "Switch2"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ JSON.parse($json.choices[0].message.content).matched_id}}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2480,
+        192
+      ],
+      "id": "f2cedb1e-a53e-4855-b79f-327449d8a059",
+      "name": "Get many rows3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const habit = $input.first().json;\n\n// 1. Ambil waktu sekarang dalam zona waktu WIB (UTC+7)\nconst nowUTC = new Date();\nconst nowWIB = new Date(nowUTC.getTime() + 7 * 60 * 60 * 1000);\nconst currentStr = nowWIB.toISOString().substring(11, 19); // Format \"HH:mm:ss\"\n\n// 2. Fungsi pembantu untuk mengubah string \"HH:mm:ss\" menjadi objek Date agar bisa dibandingkan\nconst parseTimeToDate = (timeStr) => {\n    const [hours, minutes, seconds] = timeStr.split(':').map(Number);\n    const date = new Date(nowWIB); // Gunakan basis tanggal hari ini\n    date.setHours(hours, minutes, seconds, 0);\n    return date;\n};\n\n// 3. Konversi time_start dan time_end asal dari database ke objek Date\nconst originStart = parseTimeToDate(habit.time_start);\nconst originEnd = parseTimeToDate(habit.time_end);\n\n// 4. Siapkan variabel penampung untuk hasil akhir berbentuk string\nlet finalStart = habit.time_start;\nlet finalEnd = habit.time_end;\n\n// 5. Jarak waktu sekarang ke time_end asal (dalam satuan milidetik)\nconst timeDiffToEnd = originEnd.getTime() - nowWIB.getTime();\nconst twoHoursInMs = 2 * 60 * 60 * 1000;\n\n// --- LOGIKA PENGKONDISIAN WAKTU ---\n\nif (originEnd < nowWIB) {\n    // KONDISI 1 (PERBAIKAN): Jika time_end asal lebih awal daripada sekarang\n    // - time_start TETAP mengunci nilai aslinya (misal: 10:00:00)\n    // - time_end BERUBAH mengikuti waktu sekarang (misal: 13:00:00)\n    finalStart = habit.time_start;\n    finalEnd = currentStr;\n\n} else if (nowWIB < originStart) {\n    // KONDISI 2: Jika sekarang lebih awal daripada time_start asal\n    // - time_start gunakan waktu sekarang\n    finalStart = currentStr;\n\n} else if (nowWIB >= originStart && nowWIB <= originEnd) {\n    // KONDISI 3: Jika sekarang berada di antara time_start dan time_end asal\n    if (timeDiffToEnd < twoHoursInMs) {\n        // Jika jarak waktu ke time_end kurang dari 2 jam, set time_start menjadi 2 jam sebelum time_end\n        const newStartObj = new Date(originEnd.getTime() - twoHoursInMs);\n        finalStart = newStartObj.toISOString().substring(11, 19);\n    }\n}\n\n// 6. Hitung poin dan status rutinitas\nconst newPoints = habit.points + 2;\nconst newStatus = newPoints >= 10 ? 'ROUTINE' : 'SUGGESTION';\n\nreturn [{\n    json: {\n        now:new Date(new Date().getTime() + 7 * 60 * 60 * 1000).toISOString().substring(11, 19),\n        id: habit.id,\n        points: newPoints,\n        status: newStatus,\n        last_suggested_at: nowWIB.toISOString().replace('T', ' ').substring(0, 19), // Format SQL Datetime WIB\n        time_start: finalStart,\n        time_end: finalEnd,\n        activity_name: habit.activity_name\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        192
+      ],
+      "id": "3eff1f38-4f7d-4c9e-9331-f5a76227e86a",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "habit_tracker",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "points",
+              "fieldValue": "={{ $json.points }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            },
+            {
+              "fieldId": "last_suggested_at",
+              "fieldValue": "={{ $json.last_suggested_at }}"
+            },
+            {
+              "fieldId": "time_start",
+              "fieldValue": "={{ $json.time_start }}"
+            },
+            {
+              "fieldId": "time_end",
+              "fieldValue": "={{ $json.time_end }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2896,
+        192
+      ],
+      "id": "a77e5e68-0e3f-47c9-bc35-d362dacdbad5",
+      "name": "Update a row1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mengambil data dari node sebelumnya\nconst rawResponse = $('HTTP Request22').first().json; \nconst aiContentText = rawResponse.choices[0].message.content;\nconst matchmakerData = JSON.parse(aiContentText);\n\n// 1. Mengambil waktu UTC saat ini\nconst now = new Date();\n\n// 2. Paksa konversi ke Zona Waktu WIB (UTC + 7 Jam)\nconst wibOffset = 7 * 60 * 60 * 1000; \nconst nowWIB = new Date(now.getTime() + wibOffset);\n\n// 3. Membuat blok waktu berdasarkan jam WIB\nconst timeStart = new Date(nowWIB.getUTCFullYear(), nowWIB.getUTCMonth(), nowWIB.getUTCDate(), nowWIB.getUTCHours(), 0, 0);\n\n// Waktu selesai diset ke 2 jam setelahnya\nconst timeEnd = new Date(timeStart.getTime() + (2 * 60 * 60 * 1000));\n\n// 4. Konversi ke format string (HH:mm:ss) menggunakan metode UTC agar tidak bergeser lagi\nconst formatTime = (date) => {\n    const hours = String(date.getUTCHours()).padStart(2, '0');\n    const minutes = String(date.getUTCMinutes()).padStart(2, '0');\n    const seconds = String(date.getUTCSeconds()).padStart(2, '0');\n    return `${hours}:${minutes}:${seconds}`;\n};\n\nreturn [{\n    json: {\n        activity_name: matchmakerData.new_habit_name,\n        time_start: formatTime(timeStart),\n        time_end: formatTime(timeEnd),\n        points: 2,\n        status: 'SUGGESTION'\n    }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        384
+      ],
+      "id": "1802233e-15ae-4534-9e9b-830dfe4122c5",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "tableId": "habit_tracker",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "activity_name",
+              "fieldValue": "={{ $json.activity_name }}"
+            },
+            {
+              "fieldId": "time_start",
+              "fieldValue": "={{ $json.time_start }}"
+            },
+            {
+              "fieldId": "time_end",
+              "fieldValue": "={{ $json.time_end }}"
+            },
+            {
+              "fieldId": "points",
+              "fieldValue": "={{ $json.points }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        384
+      ],
+      "id": "12020f71-d295-4e71-a142-131a11a46a63",
+      "name": "Create a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "system_memory",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "AWAITING_NEW_HABIT"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        304
+      ],
+      "id": "883d6456-ce1b-44bc-8fb5-6fd18c5bb41f",
+      "name": "Delete a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.6,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah asisten AI pribadi yang suportif yang merespon aktivitas kegiatan yang dilakukan di waktu senggang. Nama bos Anda adalah Afin. Sapa dia secara langsung. JANGAN PERNAH menggunakan kata 'Pengguna' atau sudut pandang ketiga.\\n\\nFAKTA SAAT INI:\\n- Aktivitas yang baru saja dipilih: {{ $json.activity_name }}\\n\\nINSTRUKSI LOGIKA KETAT:\\n1.Berikan ucapan selamat beraktivitas : '{{ $json.activity_name }}'.\\n2.Berikan pesan tambahan yang relevan dengan '{{ $json.activity_name }}' saat ini.\\n3. Balas dengan maksimal 2 kalimat pendek, gunakan gaya bahasa kasual, asyik, dan natural (layaknya teman atau asisten pribadi di WhatsApp). Boleh gunakan emoji secukupnya.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Buatkan pesan balasan WhatsApp untukku sekarang berdasarkan fakta di atas.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1456,
+        96
+      ],
+      "id": "1f31898b-287d-4476-99f8-619291beeaa1",
+      "name": "HTTP Request23",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.6,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah asisten AI pribadi yang suportif. Nama bos Anda adalah Afin. Sapa dia secara langsung.\\n\\nFAKTA SAAT INI:\\n- Teks balasan Afin: '{{ $('Code in JavaScript').item.json.user_text }}'\\n- Status di Sistem: {{ $('Switch2').first().json.is_match ? 'Aktivitas Lama (Poin Ditambahkan)' : 'Aktivitas Baru' }}\\n\\nINSTRUKSI LOGIKA KETAT:\\n1. CEK 'Status di Sistem'\\n2. JIKA 'Status di Sistem' statusnya 'Aktivitas Lama': Berikan respons santai seakan Anda paham maksudnya. Beritahu bahwa aktivitas itu sebenarnya sudah ada dalam catatan (contoh: 'Oh, maksudnya {{ $('Code in JavaScript').item.json.user_text }} ya!.\\n3. JIKA 'Status di Sistem' statusnya 'Aktivitas Baru': Tunjukkan antusiasme dan senang karena Afin melakukan hal baru. Beritahu bahwa aktivitas tersebut sudah disimpan ke dalam daftar kebiasaan barunya (contoh aktifitas cuci motor, 'Wah rajin banget nyuci motor Afin! Udah aku masukin ke daftar memori kebiasaan barumu ya.').\\n4. berikan ucapan selamat yang relevan dengan [aktifitas] (contoh aktifitas olahraga, 'selamat berolahraga ya').\\n5. Balas dengan maksimal 2 kalimat pendek, tidak mengandung pertanyaan, kasual, asyik, dan natural layaknya teman chat, Boleh gunakan emoji secukupnya asalkan sesuai dengan aktifitasnya.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Buatkan konfirmasi pencatatan aktivitas untukku sekarang berdasarkan fakta di atas (tanpa kalimat 'Status di Sistem menunjukkan bahwa..').\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3552,
+        304
+      ],
+      "id": "02516297-a89b-4453-88ea-0280d22fac88",
+      "name": "HTTP Request24",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n  \"text\": \"{{ $json.choices[0].message.content.replace(/\\n/g, '\\\\n').replace(/\"/g, '\\\\\"') }}\",\n  \"session\": \"default\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3776,
+        304
+      ],
+      "id": "4a2de1d9-77fb-43aa-aa6d-63fd0926599f",
+      "name": "HTTP Request1",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "additionalFields": {
+          "color": "9",
+          "summary": "={{ $('Update a row').item.json.activity_name }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1952,
+        -32
+      ],
+      "id": "0e8628bf-b9e4-44ef-bfd9-af8414339a51",
+      "name": "Create an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "additionalFields": {
+          "color": "3",
+          "summary": "={{ JSON.parse($('HTTP Request22').item.json.choices[0].message.content).is_match ? $('Code in JavaScript2').first().json.activity_name : $('Code in JavaScript3').first().json.activity_name }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        3328,
+        304
+      ],
+      "id": "dd14c540-efda-488a-8df3-f0014116d0f6",
+      "name": "Create an event1",
+      "executeOnce": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "system_memory",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "ACTIVE_TASK_POLL"
+            },
+            {
+              "fieldId": "metadata",
+              "fieldValue": "={{ JSON.stringify({ event_id: $json.id, activity_name: $json.summary }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        -32
+      ],
+      "id": "9e0b43d1-45f6-492a-9d88-74040f7b7006",
+      "name": "Create a row2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "hours"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2352,
+        -32
+      ],
+      "id": "218e5a67-b378-4993-9489-84e9075f5ff8",
+      "name": "Wait",
+      "webhookId": "545d8285-33b3-4d00-b1d1-b7213d0bfaf6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendPoll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={  \n  \"chatId\": \"222788627513504@lid\",\n  \"poll\": {\n    \"name\": \"Udah 1 jam nih! Aktivitas '{{ $('Create a row2').item.json.metadata.parseJson().activity_name}}' kamu udah selesai belum?\",\n    \"options\": [\"Selesai\", \"Lanjut aktivitas lainnya\"],\n    \"selectableOptionsCount\": 1\n  },\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2560,
+        -32
+      ],
+      "id": "ae5a6a9d-7626-47d6-9a91-b2943688a1b5",
+      "name": "HTTP Request2",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "system_memory",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "content",
+              "fieldValue": "ACTIVE_TASK_POLL"
+            },
+            {
+              "fieldId": "metadata",
+              "fieldValue": "={{ JSON.stringify({ event_id:$('Create an event1').item.json.id, activity_name:$('Create an event1').item.json.summary  }) }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3984,
+        304
+      ],
+      "id": "2a97c74d-b5e5-4412-98e2-b506a84bbf8c",
+      "name": "Create a row3",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "hours"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4192,
+        304
+      ],
+      "id": "26949e2f-d749-42d1-ba78-7a15cb42bd7f",
+      "name": "Wait1",
+      "webhookId": "545d8285-33b3-4d00-b1d1-b7213d0bfaf6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendPoll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={  \n  \"chatId\": \"222788627513504@lid\",\n  \"poll\": {\n    \"name\": \"Udah 1 jam nih! Aktivitas '{{ $('HTTP Request22').item.json.choices[0].message.content.parseJson().new_habit_name }}' kamu udah selesai belum?\",\n    \"options\": [\"Selesai\", \"Lanjut aktivitas lainnya\"],\n    \"selectableOptionsCount\": 1\n  },\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4400,
+        304
+      ],
+      "id": "3c78c8a0-dc45-4fad-8822-bf71105992db",
+      "name": "HTTP Request3",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "system_memory",
+        "limit": 1,
+        "orderBy": "=created_at.desc",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "ACTIVE_TASK_POLL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        928,
+        -384
+      ],
+      "id": "dbba1143-edc9-4173-af28-f107c290dec6",
+      "name": "Get many rows4",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "eventId": "={{ $json.metadata.parseJson().event_id }}",
+        "updateFields": {
+          "end": "={{ $now.toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        1280,
+        -384
+      ],
+      "id": "5ba5ff99-0070-4d82-806a-4e7a6bf590f7",
+      "name": "Update an event",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n  \"text\": \"{{ $json.choices[0].message.content.replace(/\\n/g, '\\\\n') }}\",\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1744,
+        -384
+      ],
+      "id": "511eabec-0bd1-4021-b41d-2b9db9a11282",
+      "name": "HTTP Request4",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "system_memory",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "ACTIVE_TASK_POLL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        -384
+      ],
+      "id": "a6f0f558-e228-415c-9761-54e830177079",
+      "name": "Delete a row1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "system_memory",
+        "limit": 1,
+        "orderBy": "created_at.desc",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "ACTIVE_TASK_POLL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -224
+      ],
+      "id": "5832fe3a-64df-40c0-91ee-6af65bc5351a",
+      "name": "Get many rows5",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "eventId": "={{ $json.metadata.parseJson().event_id }}",
+        "updateFields": {
+          "end": "={{ $now.toISO() }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        -224
+      ],
+      "id": "82647ade-8cfb-4872-bb98-5d8934e46b34",
+      "name": "Update an event1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "tableId": "system_memory",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "content",
+              "condition": "eq",
+              "keyValue": "ACTIVE_TASK_POLL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1072,
+        -224
+      ],
+      "id": "a2fffd93-eda6-4271-aaa2-aa04702bc584",
+      "name": "Delete a row2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "Zdd8xEa1fLAHfYjR",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/Zdd8xEa1fLAHfYjR",
+          "cachedResultName": "Life-OS: Time Orchestrator - Radar"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [
+            "test"
+          ],
+          "schema": [
+            {
+              "id": "test",
+              "displayName": "test",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1280,
+        -224
+      ],
+      "id": "56c11b5e-6d6b-4e46-9642-8aa1cfe82f72",
+      "name": "Call 'Life-OS: Time Orchestrator - Radar'"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.6,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": {{ \n        JSON.stringify(\n          \"Anda adalah asisten AI pribadi bernama 'Strategist' yang suportif. Nama bos Anda adalah Afin. Sapa dia secara langsung (contoh: 'Halo Afin...'). JANGAN PERNAH menggunakan kata 'Pengguna' atau 'Anda'.\\n\\n\" +\n          \"INSTRUKSI LOGIKA KETAT:\\n\" +\n          \"1. BACA nama aktivitas yang baru saja diselesaikan Afin pada pesan user.\\n\" +\n          \"2. Berikan apresiasi atau selamat karena telah menyelesaikan aktivitas tersebut dengan gaya yang asyik, kasual, dan natural layaknya teman chat.\\n\" +\n          \"3. Jika aktivitas yang selesai bersifat produktif/berat (seperti koding, belajar, kuliah, kerja), berikan ucapan selamat istirahat sejenak atau regangkan otot. Jika aktivitasnya santai/rutinitas harian (seperti makan, mandi, tidur), berikan respons penutup yang mengalir ramah.\\n\" +\n          \"4. Informasikan secara halus bahwa catatan durasi di kalendernya sudah berhasil Anda perbarui.\\n\" +\n          \"5. Balas dengan MAKSIMAL 2-3 kalimat pendek, hangat, friendly, dan hindari gaya bahasa kaku seperti robot.\"\n        )\n      }}\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify(\"Aktivitas yang baru saja diselesaikan: \" + ($('Get many rows4').item.json.metadata.parseJson().activity_name || \"Aktivitas harian\")) }}\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1520,
+        -384
+      ],
+      "id": "8e264dc5-9fb8-48db-86ac-6f99864e0b36",
+      "name": "HTTP Request25",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// 1. Jika database kosong (tidak ada status AWAITING sama sekali)\nif (items.length === 0 || !items[0].json.id) {\n    return [{ json: { is_locked: false, reason: \"Tidak ada kunci\" } }];\n}\n\nconst memoryRow = items[0].json;\nlet expiresAt = null;\n\n// Perbaikan: Deteksi jika metadata berbentuk string JSON (text dari database)\nif (memoryRow.metadata) {\n    if (typeof memoryRow.metadata === 'string') {\n        try {\n            const parsedMetadata = JSON.parse(memoryRow.metadata);\n            expiresAt = parsedMetadata.expires_at;\n        } catch (e) {\n            expiresAt = null; // Gagal parse JSON\n        }\n    } else {\n        expiresAt = memoryRow.metadata.expires_at;\n    }\n}\n\nconst now = new Date();\n\n// 2. Jika kunci ditemukan, mari kita cek jamnya!\nif (expiresAt && new Date(expiresAt) > now) {\n    // Waktu sekarang masih SEBELUM waktu kedaluwarsa -> MASIH VALID\n    return [{\n        json: {\n            content: memoryRow.content,\n            is_locked: true,\n            memory_id: memoryRow.id,\n            expires_at: expiresAt\n        }\n    }];\n} else {\n    // Waktu sekarang sudah LEWAT dari kedaluwarsa -> EXPIRED\n    return [{\n        json: {\n            data: expiresAt, // Sekarang nilai ini akan muncul (tidak undefined lagi)\n            content: memoryRow.content,\n            is_locked: false,\n            reason: \"Kunci sudah kedaluwarsa (Expired)\",\n            expired_memory_id: memoryRow.id \n        }\n    }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        288
+      ],
+      "id": "5de6f926-b238-4843-9938-c34a3c5b417f",
+      "name": "Code in JavaScript4"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "deadlines",
+        "limit": 1,
+        "orderBy": "=created_at.desc",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "PENDING"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -384
+      ],
+      "id": "679e32ee-9db6-4511-83bd-baeb1605da1b",
+      "name": "Get many rows6",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "70xb3vp.n8n.bocindonesia.com",
+            "user-agent": "WAHA/2026.5.1",
+            "content-length": "4632",
+            "accept": "application/json, text/plain, */*",
+            "accept-encoding": "gzip, br",
+            "cdn-loop": "cloudflare; loops=1",
+            "cf-connecting-ip": "157.15.4.25",
+            "cf-ipcountry": "ID",
+            "cf-ray": "a16e626ba89e8ad4-LAX",
+            "cf-visitor": "{\"scheme\":\"https\"}",
+            "content-type": "application/json",
+            "x-forwarded-for": "10.0.0.4",
+            "x-forwarded-host": "70xb3vp.n8n.bocindonesia.com",
+            "x-forwarded-port": "80",
+            "x-forwarded-proto": "http",
+            "x-forwarded-server": "60beac6acdb2",
+            "x-real-ip": "10.0.0.4",
+            "x-webhook-request-id": "1fva91cmr95q6m9",
+            "x-webhook-timestamp": "1783338548480"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "id": "evt_01kwvm5f801yfrp5w25swtzj10",
+            "timestamp": 1783338548480,
+            "event": "poll.vote",
+            "session": "default",
+            "metadata": {},
+            "me": {
+              "id": "6285165868482@c.us",
+              "pushName": "Admin"
+            },
+            "payload": {
+              "poll": {
+                "id": "true_222788627513504@lid_3EB05DB089F8A1E3BB7867",
+                "to": "222788627513504@lid",
+                "from": "6285165868482@c.us",
+                "fromMe": true
+              },
+              "vote": {
+                "id": "false_222788627513504@lid_3EB05DB089F8A1E3BB7867",
+                "to": "6285165868482@c.us",
+                "from": "222788627513504@lid",
+                "fromMe": false,
+                "selectedOptions": [
+                  "Selesai"
+                ],
+                "timestamp": 1783338546020
+              },
+              "_data": {
+                "voter": "222788627513504@lid",
+                "selectedOptions": [
+                  {
+                    "name": "Selesai",
+                    "localId": 0
+                  }
+                ],
+                "interractedAtTs": 1783338546020,
+                "parentMessage": {
+                  "_data": {
+                    "id": {
+                      "fromMe": true,
+                      "remote": "222788627513504@lid",
+                      "id": "3EB05DB089F8A1E3BB7867",
+                      "_serialized": "true_222788627513504@lid_3EB05DB089F8A1E3BB7867"
+                    },
+                    "viewed": false,
+                    "body": "",
+                    "type": "poll_creation",
+                    "t": 1783335433,
+                    "from": "214006056919268@lid",
+                    "to": "222788627513504@lid",
+                    "ack": 3,
+                    "isNewMsg": true,
+                    "star": false,
+                    "kicNotified": false,
+                    "isFromTemplate": false,
+                    "isAdsMedia": false,
+                    "pollName": "Udah 1 jam nih! Aktivitas 'Ngoding' kamu udah selesai belum?",
+                    "pollOptions": [
+                      {
+                        "name": "Selesai",
+                        "localId": 0
+                      },
+                      {
+                        "name": "Lanjut aktivitas lainnya",
+                        "localId": 1
+                      }
+                    ],
+                    "pollSelectableOptionsCount": 1,
+                    "pollInvalidated": false,
+                    "isSentCagPollCreation": false,
+                    "latestEditMsgKey": null,
+                    "latestEditSenderTimestampMs": null,
+                    "mentionedJidList": [],
+                    "groupMentions": [],
+                    "isEventCanceled": false,
+                    "eventInvalidated": false,
+                    "isVcardOverMmsDocument": false,
+                    "isCaptionByUser": false,
+                    "isForwarded": false,
+                    "isQuestion": false,
+                    "isSpoiler": false,
+                    "questionReplyQuotedMessage": null,
+                    "questionResponsesCount": 0,
+                    "readQuestionResponsesCount": 0,
+                    "forwardsCount": 0,
+                    "hasReaction": false,
+                    "newsletterAdminProfile": null,
+                    "ephemeralSettingTimestamp": 1766934518,
+                    "disappearingModeInitiator": "chat",
+                    "disappearingModeTrigger": "chat_settings",
+                    "messageSecret": {
+                      "0": 53,
+                      "1": 33,
+                      "2": 242,
+                      "3": 117,
+                      "4": 138,
+                      "5": 241,
+                      "6": 213,
+                      "7": 94,
+                      "8": 226,
+                      "9": 125,
+                      "10": 228,
+                      "11": 48,
+                      "12": 55,
+                      "13": 5,
+                      "14": 239,
+                      "15": 98,
+                      "16": 245,
+                      "17": 181,
+                      "18": 143,
+                      "19": 136,
+                      "20": 83,
+                      "21": 220,
+                      "22": 180,
+                      "23": 150,
+                      "24": 115,
+                      "25": 146,
+                      "26": 112,
+                      "27": 204,
+                      "28": 247,
+                      "29": 16,
+                      "30": 175,
+                      "31": 22
+                    },
+                    "productHeaderImageRejected": false,
+                    "lastPlaybackProgress": 0,
+                    "isDynamicReplyButtonsMsg": false,
+                    "isCarouselCard": false,
+                    "parentMsgId": null,
+                    "callSilenceReason": null,
+                    "isVideoCall": false,
+                    "callDuration": null,
+                    "callCreator": null,
+                    "callParticipants": null,
+                    "isCallLink": null,
+                    "callLinkToken": null,
+                    "terminatedByDeviceSwitch": null,
+                    "selfOtherDeviceConnected": null,
+                    "bytesSent": null,
+                    "bytesReceived": null,
+                    "isMdHistoryMsg": false,
+                    "stickerSentTs": 0,
+                    "isAvatar": false,
+                    "lastUpdateFromServerTs": 0,
+                    "invokedBotWid": null,
+                    "bizBotType": null,
+                    "botDeepLinkToken": null,
+                    "aiMediaCollectionInfo": null,
+                    "expectedImageCount": null,
+                    "expectedVideoCount": null,
+                    "botResponseTargetId": null,
+                    "botPluginType": null,
+                    "botPluginReferenceIndex": null,
+                    "botPluginSearchProvider": null,
+                    "botPluginSearchUrl": null,
+                    "botPluginSearchQuery": null,
+                    "botPluginMaybeParent": false,
+                    "botReelPluginThumbnailCdnUrl": null,
+                    "botMessageDisclaimerText": null,
+                    "botSessionTransparencyType": null,
+                    "botMsgBodyType": null,
+                    "hatchMetadataSync": null,
+                    "requiresDirectConnection": false,
+                    "bizContentPlaceholderType": null,
+                    "hostedBizEncStateMismatch": false,
+                    "senderOrRecipientAccountTypeHosted": false,
+                    "placeholderCreatedWhenAccountIsHosted": false,
+                    "groupHistoryBundleMessageKey": null,
+                    "groupHistoryBundleMetadata": null,
+                    "groupHistoryIndividualMessageInfo": null,
+                    "nonJidMentions": null
+                  },
+                  "id": {
+                    "fromMe": true,
+                    "remote": "222788627513504@lid",
+                    "id": "3EB05DB089F8A1E3BB7867",
+                    "_serialized": "true_222788627513504@lid_3EB05DB089F8A1E3BB7867"
+                  },
+                  "ack": 3,
+                  "hasMedia": false,
+                  "body": "Udah 1 jam nih! Aktivitas 'Ngoding' kamu udah selesai belum?",
+                  "type": "poll_creation",
+                  "timestamp": 1783335433,
+                  "from": "214006056919268@lid",
+                  "to": "222788627513504@lid",
+                  "deviceType": "web",
+                  "isForwarded": false,
+                  "forwardingScore": 0,
+                  "isStatus": false,
+                  "isStarred": false,
+                  "fromMe": true,
+                  "hasQuotedMsg": false,
+                  "hasReaction": false,
+                  "vCards": [],
+                  "mentionedIds": [],
+                  "groupMentions": [],
+                  "isGif": false,
+                  "pollName": "Udah 1 jam nih! Aktivitas 'Ngoding' kamu udah selesai belum?",
+                  "pollOptions": [
+                    {
+                      "name": "Selesai",
+                      "localId": 0
+                    },
+                    {
+                      "name": "Lanjut aktivitas lainnya",
+                      "localId": 1
+                    }
+                  ],
+                  "allowMultipleAnswers": false,
+                  "pollInvalidated": false,
+                  "isSentCagPollCreation": false,
+                  "messageSecret": [
+                    53,
+                    33,
+                    242,
+                    117,
+                    138,
+                    241,
+                    213,
+                    94,
+                    226,
+                    125,
+                    228,
+                    48,
+                    55,
+                    5,
+                    239,
+                    98,
+                    245,
+                    181,
+                    143,
+                    136,
+                    83,
+                    220,
+                    180,
+                    150,
+                    115,
+                    146,
+                    112,
+                    204,
+                    247,
+                    16,
+                    175,
+                    22
+                  ]
+                },
+                "parentMsgKey": {
+                  "fromMe": true,
+                  "remote": "222788627513504@lid",
+                  "id": "3EB05DB089F8A1E3BB7867",
+                  "_serialized": "true_222788627513504@lid_3EB05DB089F8A1E3BB7867"
+                }
+              }
+            },
+            "engine": "WEBJS",
+            "environment": {
+              "version": "2026.5.1",
+              "engine": "WEBJS",
+              "tier": "CORE",
+              "browser": "/usr/bin/chromium",
+              "platform": "linux/x64",
+              "worker": {
+                "id": null
+              }
+            }
+          },
+          "webhookUrl": "https://70xb3vp.n8n.bocindonesia.com/webhook/waha-poll-receiver",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many rows6",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many rows5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request23",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "waha-inbound": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Get many rows1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "Get many rows2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request22",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request22": {
+      "main": [
+        [
+          {
+            "node": "Switch2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch2": {
+      "main": [
+        [
+          {
+            "node": "Get many rows3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Update a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Create a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row1": {
+      "main": [
+        [
+          {
+            "node": "Delete a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row1": {
+      "main": [
+        [
+          {
+            "node": "Delete a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request23": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row": {
+      "main": [
+        [
+          {
+            "node": "Create an event1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request24": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event": {
+      "main": [
+        [
+          {
+            "node": "Create a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request24",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row2": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row3": {
+      "main": [
+        [
+          {
+            "node": "Wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows4": {
+      "main": [
+        [
+          {
+            "node": "Update an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        [
+          {
+            "node": "Delete a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request25",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows5": {
+      "main": [
+        [
+          {
+            "node": "Update an event1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update an event1": {
+      "main": [
+        [
+          {
+            "node": "Delete a row2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete a row2": {
+      "main": [
+        [
+          {
+            "node": "Call 'Life-OS: Time Orchestrator - Radar'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Create an event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request25": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Create a row3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript4": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows6": {
+      "main": [
+        [
+          {
+            "node": "Get many rows4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Jakarta",
+    "callerPolicy": "workflowsFromSameOwner",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "versionId": "addbfee3-d1a5-4f1d-86c6-47ef57bd3be5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb4ec7fed4887f4cc81d7810d7b72ed88c4ac7714b865ebd1438277ded8f8e8b"
+  },
+  "nodeGroups": [],
+  "id": "NuyqvLq6eYnqzq0n",
+  "tags": []
+}

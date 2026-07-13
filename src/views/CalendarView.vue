@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, watch, reactive } from 'vue'
+import { ref, onMounted, onUnmounted, watch, reactive, computed } from 'vue'
 import { 
   Calendar, AlertCircle, RefreshCw, X, Trash2, Save,
   GraduationCap, Code, Target, Users, ChevronDown 
@@ -9,6 +9,9 @@ import WeekStrip from '../components/calendar/WeekStrip.vue'
 import TimelineView from '../components/calendar/TimelineView.vue'
 import { getValidToken, fetchEventsForDate, initTokenClient, updateGoogleEvent, deleteGoogleEvent } from '../services/googleCalendar'
 import { getLocalEvents, updateEvent, deleteEvent } from '../services/localCalendar'
+import { useAIInsight } from '../composables/useAIInsight'
+
+const { insight: aiInsight, isLoading: aiLoading, source: aiSource, fetchInsight } = useAIInsight()
 
 const selectedDate = ref(new Date())
 const events = ref([])
@@ -220,6 +223,29 @@ function confirmDeleteEvent() {
     isDeletingEvent.value = false
   }
 }
+const calendarInsightMessage = computed(() => aiInsight.value || 'Memuat insight...')
+
+function loadCalendarInsight(forceRefresh = false) {
+  const evts = events.value || []
+  const cats = [...new Set(evts.map(e => e.category || 'personal'))].join(', ')
+  const firstTime = evts.length > 0 ? new Date(evts[0].start).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'
+  const lastTime = evts.length > 0 ? new Date(evts[evts.length - 1].end || evts[evts.length - 1].start).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'
+  
+  const ctx = {
+    eventsCount: evts.length,
+    categories: cats || 'tidak ada',
+    firstEventTime: firstTime,
+    lastEventTime: lastTime,
+    hasGap: evts.length >= 2,
+  }
+  fetchInsight('calendar', ctx, forceRefresh)
+}
+
+watch(events, () => {
+  if (!isLoading.value) {
+    loadCalendarInsight()
+  }
+}, { deep: true })
 </script>
 
 <template>
@@ -227,9 +253,12 @@ function confirmDeleteEvent() {
     <!-- AI Insight -->
     <AIInsightCard
       title="AI Schedule Analysis"
-      message="Ada jeda 2 jam kosong di siang hari (12:30-14:00), cocok untuk istirahat atau coding project web. Deadline tugas AI malam ini — pastikan submit sebelum 23:59!"
-      timestamp="3 menit lalu"
+      :message="calendarInsightMessage"
+      :loading="aiLoading"
+      :source="aiSource"
+      timestamp="Baru saja"
       :icon="Calendar"
+      @refresh="loadCalendarInsight(true)"
     />
 
     <!-- Week Strip Calendar -->

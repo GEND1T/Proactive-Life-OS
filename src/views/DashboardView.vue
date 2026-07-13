@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { Brain, Repeat } from 'lucide-vue-next'
 import AIInsightCard from '../components/shared/AIInsightCard.vue'
 import RadarWidget from '../components/dashboard/RadarWidget.vue'
@@ -10,12 +10,14 @@ import { getLocalEvents } from '../services/localCalendar'
 import { useFormatters } from '../composables/useFormatters'
 import { useFinanceDB } from '../composables/useFinanceDB'
 import { useActivityDB } from '../composables/useActivityDB'
+import { useAIInsight } from '../composables/useAIInsight'
 
 const { formatTime, formatCompact, formatMinutesToHours } = useFormatters()
 const greeting = getGreeting()
 
-const { totalBalance } = useFinanceDB()
+const { totalBalance, todaySpending, dailyBudget } = useFinanceDB()
 const { todayLog } = useActivityDB()
+const { insight: aiInsight, isLoading: aiLoading, source: aiSource, fetchInsight } = useAIInsight()
 
 const todayEvents = ref([])
 const isLoading = ref(true)
@@ -60,24 +62,27 @@ async function loadTodayEvents() {
   }
 }
 
-const insightMessage = computed(() => {
-  const eventsCount = todayEvents.value.length
-  const sleepText = todayLog.value?.sleep_duration_minutes ? formatMinutesToHours(todayLog.value.sleep_duration_minutes) : '7j'
-  
-  let message = `Energi kamu hari ini cukup baik dengan ${sleepText} tidur. `
-  
-  if (eventsCount > 0) {
-    message += `Ada ${eventsCount} jadwal hari ini yang perlu diperhatikan. `
-  } else {
-    message += `Tidak ada jadwal hari ini, waktu yang tepat untuk bersantai atau eksplor hal baru. `
-  }
+const insightMessage = computed(() => aiInsight.value || 'Memuat insight...')
 
-  if (totalBalance.value) {
-    message += `Saldo totalmu Rp ${formatCompact(totalBalance.value)} — pastikan pengeluaran tetap terkontrol.`
+function loadAIInsight(forceRefresh = false) {
+  const ctx = {
+    sleepHours: todayLog.value?.sleep_duration_minutes ? Math.round(todayLog.value.sleep_duration_minutes / 60 * 10) / 10 : 0,
+    steps: todayLog.value?.steps_count || 0,
+    stress: todayLog.value?.stress_level_score || 0,
+    eventsCount: todayEvents.value.length,
+    balance: totalBalance.value || 0,
+    todaySpending: todaySpending.value || 0,
+    dailyBudget: dailyBudget.value || 0,
   }
-  
-  return message
-})
+  fetchInsight('dashboard', ctx, forceRefresh)
+}
+
+// Load AI insight after events are loaded
+watch([todayEvents, todayLog], () => {
+  if (!isLoading.value) {
+    loadAIInsight()
+  }
+}, { deep: true })
 
 const categoryColors = {
   akademik: 'bg-blue-400',
@@ -100,8 +105,11 @@ const categoryColors = {
     <AIInsightCard
       title="AI Daily Briefing"
       :message="insightMessage"
+      :loading="aiLoading"
+      :source="aiSource"
       timestamp="Baru saja"
       :icon="Brain"
+      @refresh="loadAIInsight(true)"
     />
 
     <!-- Radar Widget -->

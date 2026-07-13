@@ -1,0 +1,1086 @@
+{
+  "name": "Life-OS: Time Orchestrator - Radar",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "akungameku1606@gmail.com",
+          "mode": "list",
+          "cachedResultName": "akungameku1606@gmail.com"
+        },
+        "timeMin": "={{ DateTime.now().setZone('Asia/Jakarta').startOf('day').toString() }}",
+        "timeMax": "={{ $now.setZone('Asia/Jakarta').endOf('day').toString() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -48,
+        16
+      ],
+      "id": "51aeaeac-7d73-4d9a-9473-9740b01d1288",
+      "name": "Get many events",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "uDdIHkM1y7i3559L",
+          "name": "Google Calendar account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const events = $input.all();\nconst now = new Date();\nconst nowTime = now.getTime();\n\n// Paksa konversi ke Waktu Indonesia Barat (WIB) untuk jam malam\nconst currentHour = parseInt(now.toLocaleString(\"en-US\", { timeZone: \"Asia/Jakarta\", hour: \"2-digit\", hour12: false }));\n\n// Tetap aman menggunakan sintaks $getWorkflowStaticData n8n modern\nconst staticData = $getWorkflowStaticData('global');\n\nlet currentEvent = null;\nlet upcomingEvent = null;\nlet totalBusyMinutes = 0;\nlet completedEvents = []; \n\n// Membedah seluruh jadwal hari ini\nevents.forEach(item => {\n  const ev = item.json;\n  if (!ev.start || !ev.start.dateTime) return;\n\n  // Ganti kode pembersihan lama dengan regex yang lebih agresif ini:\n  if (typeof ev.summary === 'string') {\n    // Menghapus semua jenis newline, tab, dan spasi berlebih di awal/akhir teks\n    ev.summary = ev.summary.replace(/[\\r\\n\\t]+/g, ' ').replace(/\\s+/g, ' ').trim();\n  }\n\n  // 🔥 FILTER BARU: Abaikan acara jika itu adalah waktu tidur\n  const lowerSummary = ev.summary.toLowerCase();\n  const isSleepEvent = lowerSummary.includes('tidur') || lowerSummary.includes('sleep') || lowerSummary.includes('istirahat');\n  \n  if (isSleepEvent) {\n    return; // Hentikan proses untuk acara ini dan lanjut ke acara berikutnya di loop\n  }\n\n  const start = new Date(ev.start.dateTime).getTime();\n  const end = new Date(ev.end.dateTime).getTime();\n\n  // 1. Akumulasi semua kelas hari ini yang SUDAH DIMULAI (Lalu/Sedang Berjalan)\n  if (start <= nowTime) {\n    // Jika acara sudah selesai, hitung durasi penuh. Jika sedang berjalan, hitung sampai menit ini.\n    const effectiveEnd = Math.min(end, nowTime);\n    totalBusyMinutes += (effectiveEnd - start) / (1000 * 60);\n\n    // Masukkan ke daftar agenda yang dikerjakan hari ini\n    if (ev.summary && !completedEvents.includes(ev.summary)) {\n      completedEvents.push(ev.summary);\n    }\n  }\n\n  // 2. Deteksi kelas yang SEDANG berjalan saat ini\n  if (start <= nowTime && end > nowTime) {\n    currentEvent = ev;\n  }\n\n  // 3. Deteksi acara mendatang (45 menit)\n  if (start > nowTime && start <= nowTime + (360 * 60 * 1000)) {\n    upcomingEvent = ev;\n  }\n});\n\n// --- LOGIKA RUTING & PENGUNCI SPAM ---\nif (upcomingEvent) {\n  if (staticData.last_upcoming_id !== upcomingEvent.id) {\n    staticData.last_upcoming_id = upcomingEvent.id;\n    return [{ \n      json: { \n        action: \"SEND_REMINDER\", \n        title: upcomingEvent.summary, \n        location: upcomingEvent.location || \"Kelas\", \n        description: upcomingEvent.description || \"-\",\n        // 🔥 OUTPUT BARU: Menyertakan format ISO dateTime untuk dibaca node LLM berikutnya\n        start_time: upcomingEvent.start.dateTime \n      } \n    }];\n  }\n} \nelse if (currentEvent) {\n  const isQuietHours = currentHour >= 22 || currentHour < 7;\n  if (staticData.last_current_id !== currentEvent.id) {\n    if (!isQuietHours) {\n      staticData.last_current_id = currentEvent.id;\n      return [{ \n        json: { \n          action: \"AI_CURRENT_ENGAGE\", \n          title: currentEvent.summary, \n          description: currentEvent.description || \"-\",\n          // Disertakan juga di sini jika sewaktu-waktu Anda membutuhkannya\n          start_time: currentEvent.start.dateTime \n        } \n      }];\n    }\n  }\n} \nelse {\n  // WAKTU KOSONG (FREE TIME)\n  const lastFreeAlert = staticData.last_free_alert_time || 0;\n  const hoursSinceLastAlert = (nowTime - lastFreeAlert) / (1000 * 60 * 60);\n\n  if (hoursSinceLastAlert > 2) {\n    const isQuietHours = currentHour >= 22 || currentHour < 7;\n    if (!isQuietHours) {\n      staticData.last_free_alert_time = nowTime;\n      return [{ \n        json: { \n          action: \"AI_FREE_ENGAGE\", \n          is_packed_morning: totalBusyMinutes >= 240, \n          busy_hours: (totalBusyMinutes / 60).toFixed(1), \n          completed_events_text: completedEvents.length > 0 ? completedEvents.join(\", \") : \"Belum ada agenda\" \n        } \n      }];\n    }\n  }\n}\n\n// Hentikan alur jika tidak ada kondisi yang terpenuhi\nreturn [];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        16
+      ],
+      "id": "5cb23d80-3e34-462f-8bd0-486f2cfa4be6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        16
+      ],
+      "id": "e379845b-c53c-42f3-99f1-77e7ef6fdba0",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "SEND_REMINDER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "0b68e180-4a8f-415b-b4d2-04c309749d0b"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "afa3693f-7aff-4db2-a32e-35becd397a7d",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "AI_CURRENT_ENGAGE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "159911b4-c041-44a2-84c2-2bba2165af0b",
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "AI_FREE_ENGAGE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        544,
+        0
+      ],
+      "id": "8be0b495-84ee-4e5c-a6eb-fa82390d3a04",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.4,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": {{ JSON.stringify(\"Anda adalah asisten AI pribadi bernama 'Strategist'. Nama bos Anda adalah Afin, seorang mahasiswa Informatika dan Web Developer. Sapa dia secara langsung. JANGAN PERNAH memanggilnya 'Pengguna' atau 'Anda'.\\n\\nFAKTA SAAT INI:\\n- Jam: \" + new Date().toLocaleTimeString('id-ID', {timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit'}) + \" WIB.\\n- Afin SEDANG berada di tengah aktivitas yang disebutkan oleh user.\\n\\nINSTRUKSI LOGIKA:\\n1. Analisis jenis aktivitas Afin (apakah kuliah, koding, istirahat, hobi, atau rutinitas harian).\\n2. Berikan dukungan suportif atau sapaan yang sesuai dengan suasana aktivitas tersebut. Jika kegiatannya adalah istirahat/tidur, berikan ucapan santai untuk beristirahat. Jika kegiatannya produktif (kuliah/koding), tanyakan satu hal spesifik atau gunakan bahasa yang 'relate' dengan dunia Web Dev/Informatika.\\n3. Jika deskripsi aktivitasnya kosong atau tidak spesifik, berikan sapaan semangat yang disesuaikan dengan jam saat ini.\\n4. Wajib balas maksimal 2 kalimat yang kasual, profesional, asyik, dan natural.\") }}\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify(\"Kegiatan Afin yang sedang berlangsung: \" + $json.title + \". Catatan/Lokasi: \" + $json.description) }}\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        912,
+        16
+      ],
+      "id": "2e63829f-89ca-4dbc-a166-2e93897bafea",
+      "name": "HTTP Request1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.4,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Anda adalah asisten AI pribadi yang suportif. Nama bos Anda adalah Afin. Sapa dia secara langsung (contoh: 'Halo Afin...'). JANGAN PERNAH menggunakan kata 'Pengguna' atau sudut pandang ketiga.\\n\\nFAKTA SAAT INI:\\n- Jam sekarang: {{ $now.setZone('Asia/Jakarta').toFormat('HH:mm') }} WIB.\\n- Kegiatan yang baru diselesaikan hari ini: {{ $('Code in JavaScript').first()?.json?.completed_events_text || 'Belum ada agenda' }}.\\n- Total durasi kesibukan hari ini: {{ $('Code in JavaScript').first()?.json?.busy_hours || 0 }} jam.\\n- Rutinitas Wajib Saat Ini: {{ $('Cari Rutinitas').first()?.json?.activity_name || 'Tidak ada' }}\\n- Deadline Mendesak: {{ ($('deadlines1').item.json.deadline_context || 'Tidak ada').split('\\n').join(' ') }}\\n- Ada Deadline?: {{ $('deadlines1').item.json.has_urgent_deadline ? 'YA' : 'TIDAK' }}\\n- Opsi Poling Alternatif: {{ $('Code in JavaScript2').first()?.json?.waha_poll_options || 'Aktifitas Lainnya' }},{{ $('Code in JavaScript2').first()?.json?.waha_poll_options || '' }}\\n\\nINSTRUKSI LOGIKA KETAT:\\n1. BACA 'Kegiatan yang baru diselesaikan'. Sapa Afin dan sebutkan kegiatannya secara ringkas dan natural. JIKA KEGIATAN 'BELUM ADA AGENDA' BERARTI TIDAK SIBUK DAN PUNYA WAKTU LUANG. Jika durasi kesibukan tinggi (di atas 5 jam), berikan empati. ATURAN PENTING: JANGAN BERITAHU DURASI rutinitas/kesibukan jika masih RENDAH.\\n2. PRIORITAS 1 (DEADLINE): BACA 'Ada Deadline?'. JIKA 'YA', Anda WAJIB mengingatkan Afin secara suportif tentang tenggat waktu di 'Deadline Mendesak' (contoh: 'Tenggat waktu proyek X makin dekat nih, mumpung lagi luang yuk dicicil'). Jadikan ini sebagai fokus utama.\\n3. PRIORITAS 2 (RUTINITAS): Jika 'Ada Deadline?' bernilai 'TIDAK', BACA 'Rutinitas Wajib'. Jika ADA (bukan 'Tidak ada'), arahkan Afin untuk menyelesaikannya dengan ramah layaknya asisten yang hafal kebiasaannya.\\n4. HUBUNGKAN OPSI: Sambungkan 'Opsi Poling Alternatif' sebagai pilihan transisi yang logis. Jika arahannya adalah 'Tidur Malam', posisikan opsi polling sebagai pilihan alternatif 'kalau belum ngantuk' atau 'sebelum istirahat'. Jika tidak ada Rutinitas dan Deadline, tawarkan opsi poling secara asyik.\\n5. FORMAT: Balas dengan MAKSIMAL 3 kalimat pendek yang sangat natural, kasual, dan ramah seperti gaya chat teman dekat.\\n\\nCONTOH RESPONS IDEAL (IKUTI POLA DAN NADA INI):\\nFakta: Jam 02:48, Belum ada agenda, Deadline: Tugas Jaringan Komputer, Rutinitas: Tidur Malam, Opsi: Bergadang.\\nRespons: 'Halo Afin, karena hari ini belum ada agenda dan mumpung lagi luang, yuk mulai dicicil Tugas Jaringan Komputer yang batasnya hari Senin ini. Mengingat sekarang sudah jam 2 malam dan waktunya tidur, tugas ini bisa dicicil sebentar kalau Afin belum ngantuk atau mau bergadang. Atau, Afin mau langsung istirahat saja malam ini?'\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Buatkan kalimat pengantar aktivitas untukku sekarang berdasarkan fakta di atas.\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1728,
+        160
+      ],
+      "id": "5d137e20-8c3a-4391-b627-391da9d4f1c7",
+      "name": "HTTP Request",
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n  \"text\": \"{{ $json.data || $json.text  }}\",\n  \"session\": \"default\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2304,
+        0
+      ],
+      "id": "3ec75c29-bb29-4cfe-8bc6-3f1d043f3d46",
+      "name": "HTTP Request10",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Ambil content dengan benar dari indeks array choices[0]\nconst content = $input.first().json.choices[0].message.content;\n\ntry {\n    // 2. Coba parsing jika content berupa string JSON\n    const parsedData = JSON.parse(content);\n    \n    // Pastikan hasil parsing adalah objek dan bukan null\n    if (parsedData && typeof parsedData === 'object') {\n        if (Array.isArray(parsedData)) {\n            return parsedData.map(item => ({\n                json: typeof item === 'object' && item !== null ? item : { data: item }\n            }));\n        }\n        return [{ json: parsedData }];\n    }\n    \n    // Jika hasil parsing bukan objek (misal: angka atau boolean)\n    return [{ json: { data: parsedData } }];\n    \n} catch (e) {\n    // 3. JIKA CONTENT TEKS BIASA: Pastikan 'json' menunjuk ke objek { text: ... }\n    return [{ \n        json: { \n            text: content || \"\" \n        } \n    }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2080,
+        0
+      ],
+      "id": "f69f8e88-e0c3-47c3-8f24-599a0c98b3f5",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.2, \n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Kamu adalah asisten pengingat waktu personal yang akrab, suportif, dan praktis untuk bosmu yang bernama Afin. Tugasmu mengolah data jadwal menjadi pengingat dini (early warning) di WhatsApp.\\n\\nAturan Pengolahan Data & Gaya Tulis:\\n1. TULIS DALAM PARAGRAF YANG MENGALIR. Jangan hanya menyebutkan potongan kata yang diberi tanda bintang seperti robot. Gabungkan semua informasi menjadi 2-3 kalimat pendek yang natural seperti chat dari teman dekat.\\n2. JANGAN GUNAKAN format daftar atau bullet points, baik menggunakan tanda baca maupun koma yang berderet.\\n3. JANGAN PERNAH MENGUBAH DATA WAKTU. Salin PERSIS angka jam dan sisa menit yang dikirimkan oleh user. Jangan menebak, jangan menghitung ulang, dan jangan mengarang angka baru.\\n4. Gunakan format bold WhatsApp dengan SATU tanda bintang '*' HANYA untuk: nama agenda, lokasi/ruangan, jam mulai, dan sisa durasi (Contoh: *Ngoding*, *Kelas*, *17.30 WIB*, *29 menit lagi*).\\n5. BERIKAN AJAKAN BERTINDAK (CTA) YANG RELEVAN: Jika agenda fisik/lapangan (olahraga), ingatkan bersiap fisik/ganti baju. Jika agenda ruang (kelas/rapat), ingatkan siap-siap jalan ke lokasi. Jika agenda online (zoom), ingatkan standby di laptop.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"DATA JADWAL ASLI:\\n- Nama Agenda: {{ $json.title }}\\n- Tempat/Lokasi: {{ $json.location }}\\n- Waktu Mulai: {{ new Date($json.start_time).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) }} WIB\\n- Sisa Waktu Menuju Acara: {{ Math.round((new Date($json.start_time) - new Date()) / 1000 / 60) }} menit lagi\\n- Catatan Tambahan: {{ $json.description || '-' }}\\n\\nPerintah: Buatkan satu paragraf pengingat WhatsApp yang mengalir berdasarkan DATA JADWAL ASLI di atas sesuai aturan system!\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1072,
+        -176
+      ],
+      "id": "31fcc962-e7a5-48e3-8509-543467e0771d",
+      "name": "HTTP Request2",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "habit_tracker",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "points",
+              "fieldValue": "={{ $json.points }}"
+            },
+            {
+              "fieldId": "last_suggested_at",
+              "fieldValue": "={{ $json.last_suggested_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1520,
+        336
+      ],
+      "id": "6b9c35f6-f131-483d-93d3-238013ee9615",
+      "name": "Update a row",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendPoll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n  \"poll\": {\n    \"name\": \"{{ $('deadlines1').item.json.poll_title }}\",\n    \"options\": {{ JSON.stringify($('deadlines1').item.json.habit_options_list) }},\n    \"selectableOptionsCount\": 1\n  },\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1744,
+        336
+      ],
+      "id": "0ec8cc45-76bc-410c-bf43-16dfe70b3f72",
+      "name": "HTTP Request11",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Ambil semua item input\nconst items = $input.all();\nif (items.length === 0) return [];\n\n// 2. Ambil waktu sekarang dalam zona Asia/Jakarta\nconst nowWIB = $now.setZone('Asia/Jakarta').toISO();\n\n// 3. Kumpulkan opsi poling (filter hanya yang memiliki activity_name)\nconst options = items\n  .map(item => item.json.activity_name)\n  .filter(name => name !== null && name !== undefined && name !== \"\");\n\n// Tambahkan opsi wajib di akhir\noptions.push(\"Lainnya...\");\n\n// 4. Transformasi data untuk output\nreturn items.map(item => {\n  return {\n    json: {\n      id: item.json.id || null,\n      points: Math.max(0, (item.json.points || 0) - 1), // Jika null otomatis jadi 0, dikurang 1 -> max(0, -1) = 0\n      last_suggested_at: nowWIB,\n      waha_poll_options: options // Hanya berisi [\"Lainnya...\"] jika aktivitas kosong\n    }\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        160
+      ],
+      "id": "2ef74966-e413-4f70-895e-0d36d25dfc8c",
+      "name": "Code in JavaScript2",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "limit": 1,
+        "orderBy": "points.desc, last_suggested_at.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "ROUTINE"
+            },
+            {
+              "keyName": "time_start",
+              "condition": "lte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            },
+            {
+              "keyName": "time_end",
+              "condition": "gte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        160
+      ],
+      "id": "4bf43ea5-c792-4137-a876-5546c0616d1f",
+      "name": "Cari Rutinitas",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "test"
+            }
+          ]
+        }
+      },
+      "id": "6b1ebecf-e241-4ef6-a56e-3850c9c4360c",
+      "typeVersion": 1.1,
+      "name": "Lanjut aktivitas lainnya",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        464,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.1-8b-instant\",\n  \"temperature\": 0.5,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": {{ \n        JSON.stringify(\n          \"Anda adalah asisten AI pribadi bernama 'Strategist' yang suportif. Nama bos Anda adalah Afin. Sapa dia secara langsung (contoh: 'Halo Afin...'). JANGAN PERNAH menggunakan kata 'Pengguna' atau 'Anda'.\\n\\n\" +\n          \"FAKTA SAAT INI:\\n\" +\n          \"- Jam sekarang: \" + $now.setZone('Asia/Jakarta').toFormat('HH:mm') + \" WIB.\\n\" +\n          \"- Rutinitas Wajib Saat Ini: \" + (typeof $('Cari Rutinitas') !== 'undefined' && $('Cari Rutinitas').isExecuted ? ($('Cari Rutinitas').first()?.json?.activity_name || \"Tidak ada\") : \"Tidak ada\") + \"\\n\" +\n          \"- Opsi Poling Alternatif: \" + \n            (typeof $('Code in JavaScript3') !== 'undefined' && $('Code in JavaScript3').isExecuted && $('Code in JavaScript3').first()?.json?.waha_poll_options ? \n              ($('Code in JavaScript3').first().json.waha_poll_options[0] + \" atau \" + $('Code in JavaScript3').first().json.waha_poll_options[1]) : \"Istirahat atau Santai Sejenak\") + \"\\n\\n\" +\n          \"INSTRUKSI LOGIKA KETAT:\\n\" +\n          \"1. BACA 'Rutinitas Wajib Saat Ini'. Jika ADA rutinitas wajib (bukan 'Tidak ada'), AI wajib mengarahkannya dengan akrab seolah sudah hafal jadwalnya (contoh: 'Ini udah jamnya [Rutinitas] lho, yuk jangan ditunda!'). Selipkan 'Opsi Poling Alternatif' di akhir sebagai pilihan santai jika dia ingin melakukan hal lain setelahnya.\\n\" +\n          \"2. JIKA 'Rutinitas Wajib' bernilai 'Tidak ada', langsung tawarkan 'Opsi Poling Alternatif' secara asyik sebagai rekomendasi kegiatan untuk mengisi waktu luangnya saat ini.\\n\" +\n          \"3. Balas dengan MAKSIMAL 2-3 kalimat pendek yang sangat natural, kasual, friendly, dan mengalir layaknya teman chat.\"\n        )\n      }}\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Buatkan kalimat pengantar aktivitas untukku sekarang berdasarkan fakta di atas.\"\n    }\n  ]\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1376,
+        496
+      ],
+      "id": "09981321-d260-41c0-a5a6-a18c7497fe9e",
+      "name": "HTTP Request3",
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        },
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "limit": 2,
+        "orderBy": "points.desc, last_suggested_at.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "SUGGESTION"
+            },
+            {
+              "keyName": "time_start",
+              "condition": "lte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            },
+            {
+              "keyName": "time_end",
+              "condition": "gte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        688,
+        640
+      ],
+      "id": "5eff84e6-6831-4d4d-aed3-683940dc170b",
+      "name": "Get many rows1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "habit_tracker",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "points",
+              "fieldValue": "={{ $json.points }}"
+            },
+            {
+              "fieldId": "last_suggested_at",
+              "fieldValue": "={{ $json.last_suggested_at }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        736
+      ],
+      "id": "32c002ce-e0d1-40fc-b0fa-cc08295eddd1",
+      "name": "Update a row1",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://70xb3vp.waha.bocindonesia.com/api/sendPoll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "waha_ZXSGhjRAJ9j8pc6aeb1RTlC1VHMxqv4w"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatId\": \"222788627513504@lid\",\n  \"poll\": {\n    \"name\": \"{{ $('Code in JavaScript3').item.json.waha_poll_title }}\",\n    \"options\": {{ JSON.stringify($('Code in JavaScript3').first().json.waha_poll_options) }},\n    \"selectableOptionsCount\": 1\n  },\n  \"session\": \"default\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1376,
+        736
+      ],
+      "id": "d86c0858-3ff3-406d-b0c9-d8dbf95dc0cb",
+      "name": "HTTP Request12",
+      "executeOnce": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "RYYFBjZv631hD3qo",
+          "name": "Header Auth account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Ambil semua item dari input\nconst items = $input.all();\nif (items.length === 0) return [];\n\n// 2. Gunakan built-in n8n $now dengan zona waktu Asia/Jakarta\nconst nowWIB = $now.setZone('Asia/Jakarta').toISO();\n\n// 3. Filter nama aktivitas yang valid (buang null, undefined, atau string kosong)\nconst validActivities = items\n  .map(item => item.json.activity_name)\n  .filter(name => name !== null && name !== undefined && name !== \"\");\n\n// 4. Tentukan opsi dan judul poling berdasarkan kondisi data\nlet options = [];\nlet pollTitle = \"\";\n\nif (validActivities.length === 0) {\n  // Kondisi JIKA DATA KOSONG / NULL\n  options = [\"Buat Habit Baru ✨\",\"Lainnya...\"];\n  pollTitle = \"Waktunya luang nih! tapi belum ada list habit. Mau buat habit baru atau lakukan aktivitas Lain?\";\n} else {\n  // Kondisi JIKA DATA ADA\n  options = [...validActivities, \"Lainnya...\"];\n  pollTitle = \"Waktunya luang nih! Biar tetap produktif, mau fokus ke mana sekarang?\";\n}\n\n// 5. Transformasi data untuk output ke node berikutnya\nreturn items.map(item => {\n  // Buat objek dasar yang selalu ada (untuk WAHA poling)\n  const outputJson = {\n    waha_poll_title: pollTitle,\n    waha_poll_options: options\n  };\n\n  // HANYA tambahkan id, points, dan last_suggested_at jika id valid (tidak null/undefined)\n  if (item.json.id !== null && item.json.id !== undefined) {\n    outputJson.id = item.json.id;\n    outputJson.points = Math.max(0, (item.json.points || 0) - 1);\n    outputJson.last_suggested_at = nowWIB;\n  }\n\n  return {\n    json: outputJson\n  };\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        640
+      ],
+      "id": "97060d41-dc62-4d18-908f-5c5aab2be92c",
+      "name": "Code in JavaScript3",
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "limit": 1,
+        "orderBy": "points.desc, last_suggested_at.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "ROUTINE"
+            },
+            {
+              "keyName": "time_start",
+              "condition": "lte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            },
+            {
+              "keyName": "time_end",
+              "condition": "gte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        496
+      ],
+      "id": "2e7b1490-121f-4669-99c1-b4e8436d7b99",
+      "name": "Cari Rutinitas1",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "deadlines",
+        "limit": 10,
+        "orderBy": "due_date.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "PENDING"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1056,
+        160
+      ],
+      "id": "8404c188-6484-4d49-befe-68afd87f7f95",
+      "name": "deadlines",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "habit_tracker",
+        "limit": 2,
+        "orderBy": "points.desc, last_suggested_at.asc",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "SUGGESTION"
+            },
+            {
+              "keyName": "time_start",
+              "condition": "lte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            },
+            {
+              "keyName": "time_end",
+              "condition": "gte",
+              "keyValue": "={{ $now.setZone('Asia/Jakarta').toFormat('HH:mm:ss') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        720,
+        160
+      ],
+      "id": "e15b6d37-e825-4f2a-aa02-21640a36565e",
+      "name": "Habit",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4PxgsDFYl0pf8lxq",
+          "name": "Supabase account punyaafin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Proteksi input aman dari null/kosong\nconst deadlines = $input.all() || [];\nlet habitItems = [];\ntry {\n  const nodeData = $('Code in JavaScript2').all();\n  if (Array.isArray(nodeData)) habitItems = nodeData;\n} catch (e) {\n  habitItems = []; \n}\n\nconst now = new Date();\nconst todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());\nconst maxDate = new Date(todayStart);\nmaxDate.setDate(todayStart.getDate() + 5); \n\nlet urgentDeadlines = [];\nlet deadlineText = \"\";\n\n// 2. Filter deadline 5 hari ke depan\ndeadlines.forEach(item => {\n  if (item?.json) {\n    const d = item.json;\n    if (d.due_date && d.task_name) {\n      const dueDate = new Date(d.due_date);\n      if (dueDate >= todayStart && dueDate <= maxDate) {\n        urgentDeadlines.push(d);\n        const dateStr = dueDate.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });\n        deadlineText += `- ${d.task_name} (Batas: ${dateStr})\\n`;\n      }\n    }\n  }\n});\n\nif (urgentDeadlines.length === 0) {\n  deadlineText = \"Tidak ada deadline mendesak dalam 5 hari ke depan.\";\n}\n\n// 3. Set Judul, Opsi, dan Metadata secara Dinamis\nlet pollTitle = \"Waktunya luang nih! Biar tetap produktif, mau fokus ke mana sekarang?\";\nlet pollOptions = [];\n\n// Cek apakah node habit valid, memiliki opsi poling, dan ID-nya tidak null/kosong\nconst habitJson = habitItems.length > 0 ? habitItems[0].json : null;\nconst hasValidId = habitJson && habitJson.id !== null && habitJson.id !== undefined && habitJson.id !== \"\";\nconst hasHabitData = habitJson && habitJson.waha_poll_options && hasValidId;\n\nlet habitMetadata = {};\n\nif (hasHabitData) {\n  // Ambil data opsi poling asli jika lolos validasi ID\n  pollOptions = [...habitJson.waha_poll_options];\n  \n  // Ekstrak metadata\n  habitMetadata = {\n    id: habitJson.id,\n    points: habitJson.points ?? 0,\n    last_suggested_at: habitJson.last_suggested_at || new Date().toISOString()\n  };\n} else {\n  // JIKA HABIT KOSONG ATAU ID NYA NULL: Judul alternatif & opsi buat habit baru\n  pollTitle = \"Belum ada list habit nih! Mau buat habit baru atau lakukan aktivitas ini?\";\n  pollOptions = [\n    \"Buat Habit Baru ✨\",\n    \"Lainnya...\"\n  ];\n}\n\n// 4. Sisipkan opsi \"Kerjakan Deadline\" jika ada yang mendesak\nif (urgentDeadlines.length > 0) {\n  pollOptions.unshift(\"Kerjakan Deadline 🚨\");\n}\n\n;\n\n// 6. Output final (Metadata HANYA muncul jika hasHabitData bernilai true)\nreturn [{ \n  json: { \n    poll_title: pollTitle,\n    habit_options_list: pollOptions, \n    deadline_context: deadlineText.trim(), \n    has_urgent_deadline: urgentDeadlines.length > 0,\n    ...(hasHabitData ? habitMetadata : {}) // Disembunyikan total jika ID null atau data kosong\n  } \n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        160
+      ],
+      "id": "f1b24513-1d5d-40f6-ab9d-7176fbf201f4",
+      "name": "deadlines1",
+      "executeOnce": true
+    }
+  ],
+  "pinData": {
+    "Schedule Trigger1": [
+      {
+        "json": {
+          "timestamp": "2026-07-06T07:15:44.009+07:00",
+          "Readable date": "July 6th 2026, 7:15:44 am",
+          "Readable time": "7:15:44 am",
+          "Day of week": "Monday",
+          "Year": "2026",
+          "Month": "July",
+          "Day of month": "06",
+          "Hour": "07",
+          "Minute": "15",
+          "Second": "44",
+          "Timezone": "Asia/Jakarta (UTC+07:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Habit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request11",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "deadlines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cari Rutinitas": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lanjut aktivitas lainnya": {
+      "main": [
+        [
+          {
+            "node": "Get many rows1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a row1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request12",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        [
+          {
+            "node": "Cari Rutinitas1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update a row1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cari Rutinitas1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deadlines": {
+      "main": [
+        [
+          {
+            "node": "deadlines1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Habit": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "deadlines1": {
+      "main": [
+        [
+          {
+            "node": "Cari Rutinitas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "dynamic",
+    "timezone": "Asia/Jakarta",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "saveExecutionProgress": false,
+    "saveManualExecutions": false,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "06099b4e-5363-4adc-a320-620d56457b7d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fb4ec7fed4887f4cc81d7810d7b72ed88c4ac7714b865ebd1438277ded8f8e8b"
+  },
+  "nodeGroups": [],
+  "id": "Zdd8xEa1fLAHfYjR",
+  "tags": []
+}

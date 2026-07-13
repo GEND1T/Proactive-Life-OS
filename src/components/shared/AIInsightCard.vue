@@ -1,43 +1,54 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Sparkles, RefreshCw } from '@lucide/vue'
+import { ref, watch } from 'vue'
+import { Sparkles, RefreshCw, Loader2 } from '@lucide/vue'
 
 const props = defineProps({
   icon: { type: [String, Object, Function], default: '🤖' },
   title: { type: String, default: 'AI Analysis' },
   message: { type: String, required: true },
   timestamp: { type: String, default: 'Baru saja' },
+  loading: { type: Boolean, default: false },
+  source: { type: String, default: '' }, // 'gemini', 'rules', 'cache'
 })
+
+const emit = defineEmits(['refresh'])
 
 const displayedText = ref('')
-const isTyping = ref(true)
-const isRefreshing = ref(false)
+const isTyping = ref(false)
+const lastTypedMessage = ref('')
 
-onMounted(() => {
-  typeText()
-})
+// Watch for message changes (including dynamic AI updates)
+watch(() => props.message, (newMsg) => {
+  if (newMsg && newMsg !== lastTypedMessage.value) {
+    typeText(newMsg)
+  }
+}, { immediate: true })
 
-function typeText() {
+function typeText(text) {
+  if (!text) return
   displayedText.value = ''
   isTyping.value = true
+  lastTypedMessage.value = text
   let i = 0
   const interval = setInterval(() => {
-    if (i < props.message.length) {
-      displayedText.value += props.message[i]
+    if (i < text.length) {
+      displayedText.value += text[i]
       i++
     } else {
       clearInterval(interval)
       isTyping.value = false
     }
-  }, 18)
+  }, 15)
 }
 
-function refresh() {
-  isRefreshing.value = true
-  setTimeout(() => {
-    typeText()
-    isRefreshing.value = false
-  }, 600)
+function handleRefresh() {
+  emit('refresh')
+}
+
+const sourceLabels = {
+  gemini: 'Powered by Gemini AI',
+  rules: 'Smart Analysis Engine',
+  cache: 'Cached Insight',
 }
 </script>
 
@@ -55,9 +66,10 @@ function refresh() {
           </div>
         </div>
         <button
-          @click="refresh"
-          class="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
-          :class="isRefreshing ? 'animate-spin' : ''"
+          @click="handleRefresh"
+          :disabled="loading"
+          class="p-1.5 rounded-lg hover:bg-white/5 transition-colors disabled:opacity-50"
+          :class="loading ? 'animate-spin' : ''"
         >
           <RefreshCw class="w-3.5 h-3.5 text-surface-500" />
         </button>
@@ -65,7 +77,19 @@ function refresh() {
 
       <!-- AI Message -->
       <div class="min-h-[40px]">
-        <p class="text-sm text-surface-300 leading-relaxed flex items-start">
+        <!-- Loading State -->
+        <div v-if="loading" class="flex items-center gap-2 py-1">
+          <Loader2 class="w-4 h-4 text-primary-400 animate-spin" />
+          <span class="text-sm text-surface-400 italic">Menganalisis data Anda...</span>
+          <span class="flex gap-1 ml-1">
+            <span class="w-1.5 h-1.5 bg-primary-400/60 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+            <span class="w-1.5 h-1.5 bg-primary-400/60 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+            <span class="w-1.5 h-1.5 bg-primary-400/60 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+          </span>
+        </div>
+
+        <!-- Displayed Message -->
+        <p v-else class="text-sm text-surface-300 leading-relaxed flex items-start">
           <component :is="icon" v-if="typeof icon !== 'string'" class="w-4 h-4 text-primary-400 mr-2 mt-1 shrink-0" />
           <span v-else class="mr-1.5">{{ icon }}</span>
           <span>{{ displayedText }}</span>
@@ -82,7 +106,12 @@ function refresh() {
         <span class="text-[10px] text-surface-500 font-medium">
           ✨ Dianalisis {{ timestamp }}
         </span>
-        <span class="text-[10px] text-primary-500/60 font-medium">Powered by Llama-3</span>
+        <span class="text-[10px] font-medium flex items-center gap-1"
+          :class="source === 'gemini' ? 'text-cyan-400/60' : 'text-primary-500/60'">
+          <span v-if="source === 'gemini'" class="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block"></span>
+          <span v-else-if="source === 'rules'" class="w-1.5 h-1.5 rounded-full bg-primary-400 inline-block"></span>
+          {{ sourceLabels[source] || 'AI Engine' }}
+        </span>
       </div>
     </div>
   </div>
